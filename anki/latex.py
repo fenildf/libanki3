@@ -2,8 +2,12 @@
 # Copyright: Damien Elmes <anki@ichi2.net>
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
-import re, os, shutil, cgi
-from anki.utils import checksum, call, namedtmp, tmpdir, isMac, stripHTML
+import cgi
+import os
+import re
+import shutil
+
+from anki.utils import call, checksum, isMac, namedtmp, stripHTML, tmpdir
 from anki.hooks import addHook
 from anki.lang import _
 
@@ -14,16 +18,17 @@ latexCmds = [
     ["dvipng", "-D", "200", "-T", "tight", "tmp.dvi", "-o", "tmp.png"]
 ]
 
-build = True # if off, use existing media but don't create new
+build = True  # if off, use existing media but don't create new
 regexps = {
-    "standard": re.compile(r"\[latex\](.+?)\[/latex\]", re.DOTALL | re.IGNORECASE),
+    "standard": re.compile(
+        r"\[latex\](.+?)\[/latex\]", re.DOTALL | re.IGNORECASE),
     "expression": re.compile(r"\[\$\](.+?)\[/\$\]", re.DOTALL | re.IGNORECASE),
-    "math": re.compile(r"\[\$\$\](.+?)\[/\$\$\]", re.DOTALL | re.IGNORECASE),
-    }
+    "math": re.compile(r"\[\$\$\](.+?)\[/\$\$\]", re.DOTALL | re.IGNORECASE)}
 
 # add standard tex install location to osx
 if isMac:
     os.environ['PATH'] += ":/usr/texbin"
+
 
 def stripLatex(text):
     for match in regexps['standard'].finditer(text):
@@ -34,18 +39,24 @@ def stripLatex(text):
         text = text.replace(match.group(), "")
     return text
 
+
 def mungeQA(html, type, fields, model, data, col):
     "Convert TEXT with embedded latex tags to image links."
     for match in regexps['standard'].finditer(html):
-        html = html.replace(match.group(), _imgLink(col, match.group(1), model))
+        html = html.replace(
+            match.group(),
+            _imgLink(col, match.group(1), model))
     for match in regexps['expression'].finditer(html):
-        html = html.replace(match.group(), _imgLink(
-            col, "$" + match.group(1) + "$", model))
+        html = html.replace(
+            match.group(),
+            _imgLink(col, "$" + match.group(1) + "$", model))
     for match in regexps['math'].finditer(html):
-        html = html.replace(match.group(), _imgLink(
-            col,
-            "\\begin{displaymath}" + match.group(1) + "\\end{displaymath}", model))
+        html = html.replace(
+            match.group(),
+            _imgLink(col, "\\begin{displaymath}" + match.group(1) +
+                     "\\end{displaymath}", model))
     return html
+
 
 def _imgLink(col, latex, model):
     "Return an img link for LATEX, creating if necesssary."
@@ -63,11 +74,13 @@ def _imgLink(col, latex, model):
         else:
             return link
 
+
 def _latexFromHtml(col, latex):
     "Convert entities and fix newlines."
     latex = re.sub("<br( /)?>|<div>", "\n", latex)
     latex = stripHTML(latex)
     return latex
+
 
 def _buildImg(col, latex, fname, model):
     # add header/footer & convert to utf8
@@ -104,6 +117,7 @@ package in the LaTeX header instead.""") % bad
         return
     finally:
         os.chdir(oldcwd)
+
 
 def _errMsg(type, texpath):
     msg = (_("Error executing %s.") % type) + "<br>"

@@ -17,5 +17,4 @@ Importers = (
     (_("Anki 1.2 Deck (*.anki)"), Anki1Importer),
     (_("Mnemosyne 2.0 Deck (*.db)"), MnemosyneImporter),
     (_("Supermemo XML export (*.xml)"), SupermemoXmlImporter),
-    (_("Pauker 1.8 Lesson (*.pau.gz)"), PaukerImporter),
-    )
+    (_("Pauker 1.8 Lesson (*.pau.gz)"), PaukerImporter))

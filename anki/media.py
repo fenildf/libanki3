@@ -2,18 +2,20 @@
 # Copyright: Damien Elmes <anki@ichi2.net>
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
-import re
-import traceback
-import urllib
-import unicodedata
-import sys
-import zipfile
 from cStringIO import StringIO
+import re
+import os
+import sys
+import traceback
+import unicodedata
+import urllib
+import zipfile
 
-from anki.utils import checksum, isWin, isMac, json
+from anki.consts import MODEL_CLOZE, SYNC_ZIP_COUNT, SYNC_ZIP_SIZE
 from anki.db import DB
-from anki.consts import *
 from anki.latex import mungeQA
+from anki.utils import checksum, isMac, isWin, json
+
 
 class MediaManager(object):
 
@@ -82,7 +84,8 @@ create table meta (dirMod int, lastUsn int); insert into meta values (0, 0);
             try:
                 self.db.execute("""
     insert into media
-     select m.fname, csum, mod, ifnull((select 1 from log l2 where l2.fname=m.fname), 0) as dirty
+     select m.fname, csum, mod,
+      ifnull((select 1 from log l2 where l2.fname=m.fname), 0) as dirty
      from old.media m
      left outer join old.log l using (fname)
      union
@@ -92,10 +95,11 @@ create table meta (dirMod int, lastUsn int); insert into meta values (0, 0);
     insert into meta select dirMod, usn from old.meta
     """)
                 self.db.commit()
-            except Exception, e:
-                # if we couldn't import the old db for some reason, just start
+            except:  # Catch everything.
+                # If we couldn't import the old db for some reason, just start
                 # anew
-                self.col.log("failed to import old media db:"+traceback.format_exc())
+                self.col.log(
+                    "failed to import old media db:"+traceback.format_exc())
             self.db.execute("detach old")
             npath = "../collection.media.db.old"
             if os.path.exists(npath):
@@ -120,13 +124,15 @@ create table meta (dirMod int, lastUsn int); insert into meta values (0, 0);
 
     def _isFAT32(self):
         if not isWin:
-            return
-        import win32api, win32file
+            return False
+        import win32api
+        import win32file
         try:
             name = win32file.GetVolumeNameForVolumeMountPoint(self._dir[:3])
         except:
-            # mapped & unmapped network drive; pray that it's not vfat
-            return
+            # Probably a network drive. When that is FAT we may have a
+            # problem.
+            return False
         if win32api.GetVolumeInformation(name)[4].lower().startswith("fat"):
             return True
 
@@ -146,9 +152,10 @@ create table meta (dirMod int, lastUsn int); insert into meta values (0, 0);
         # remove any dangerous characters
         base = self.stripIllegal(fname)
         (root, ext) = os.path.splitext(base)
+
         def repl(match):
             n = int(match.group(1))
-            return " (%d)" % (n+1)
+            return " (%d)" % (n + 1)
         # find the first available name
         csum = checksum(data)
         while True:
@@ -197,18 +204,20 @@ create table meta (dirMod int, lastUsn int); insert into meta values (0, 0);
         ords = set(re.findall("{{c(\d+)::.+?}}", string))
         strings = []
         from anki.template.template import clozeReg
+
         def qrepl(m):
             if m.group(3):
                 return "[%s]" % m.group(3)
             else:
                 return "[...]"
+
         def arepl(m):
             return m.group(1)
         for ord in ords:
-            s = re.sub(clozeReg%ord, qrepl, string)
-            s = re.sub(clozeReg%".+?", "\\1", s)
+            s = re.sub(clozeReg % ord, qrepl, string)
+            s = re.sub(clozeReg % ".+?", "\\1", s)
             strings.append(s)
-        strings.append(re.sub(clozeReg%".+?", arepl, string))
+        strings.append(re.sub(clozeReg % ".+?", arepl, string))
         return strings
 
     def transformNames(self, txt, func):
@@ -226,6 +235,7 @@ create table meta (dirMod int, lastUsn int); insert into meta values (0, 0);
             fn = urllib.unquote
         else:
             fn = urllib.quote
+
         def repl(match):
             tag = match.group(0)
             fname = match.group("fname")
@@ -245,7 +255,8 @@ create table meta (dirMod int, lastUsn int); insert into meta values (0, 0);
         mdir = self.dir()
         # gather all media references in NFC form
         allRefs = set()
-        for nid, mid, flds in self.col.db.execute("select id, mid, flds from notes"):
+        for nid, mid, flds in self.col.db.execute(
+                "select id, mid, flds from notes"):
             noteRefs = self.filesInStr(mid, flds)
             # check the refs are in NFC
             for f in noteRefs:
@@ -272,7 +283,8 @@ create table meta (dirMod int, lastUsn int); insert into meta values (0, 0);
                 # leading _ says to ignore file
                 continue
             if not isinstance(file, unicode):
-                invalid.append(unicode(file, sys.getfilesystemencoding(), "replace"))
+                invalid.append(
+                    unicode(file, sys.getfilesystemencoding(), "replace"))
                 continue
             nfcFile = unicodedata.normalize("NFC", file)
             # we enforce NFC fs encoding on non-macs; on macs we'll have gotten
@@ -471,8 +483,8 @@ create table meta (dirMod int, lastUsn int); insert into meta values (0, 0);
         sz = 0
 
         for c, (fname, csum) in enumerate(self.db.execute(
-                        "select fname, csum from media where dirty=1"
-                        " limit %d"%SYNC_ZIP_COUNT)):
+                "select fname, csum from media where dirty=1"
+                " limit %d" % SYNC_ZIP_COUNT)):
 
             fnames.append(fname)
             normname = unicodedata.normalize("NFC", fname)

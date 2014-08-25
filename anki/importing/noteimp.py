@@ -2,16 +2,17 @@
 # Copyright: Damien Elmes <anki@ichi2.net>
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
-import  cgi
+import cgi
+
 from anki.consts import NEW_CARDS_RANDOM
-from anki.lang import _
+from anki.importing.base import Importer
+from anki.lang import _, ngettext
 from anki.utils import fieldChecksum, guid64, timestampID, \
     joinFields, intTime, splitFields
-from anki.importing.base import Importer
-from anki.lang import ngettext
 
 # Stores a list of fields, tags and deck
 ######################################################################
+
 
 class ForeignNote(object):
     "An temporary object storing fields and attributes."
@@ -19,7 +20,8 @@ class ForeignNote(object):
         self.fields = []
         self.tags = []
         self.deck = None
-        self.cards = {} # map of ord -> card
+        self.cards = {}  # map of ord -> card
+
 
 class ForeignCard(object):
     def __init__(self):
@@ -42,6 +44,7 @@ class ForeignCard(object):
 # 0: update if first field matches existing note
 # 1: ignore if first field matches existing note
 # 2: import even if first field matches existing note
+
 
 class NoteImporter(Importer):
 
@@ -99,7 +102,7 @@ class NoteImporter(Importer):
         # gather checks for duplicate comparison
         csums = {}
         for csum, id in self.col.db.execute(
-            "select csum, id from notes where mid = ?", self.model['id']):
+                "select csum, id from notes where mid = ?", self.model['id']):
             if csum in csums:
                 csums[csum].append(id)
             else:
@@ -193,7 +196,8 @@ class NoteImporter(Importer):
         else:
             self.col.sched.orderCards(did)
 
-        part1 = ngettext("%d note added", "%d notes added", len(new)) % len(new)
+        part1 = ngettext("%d note added", "%d notes added",
+                         len(new)) % len(new)
         part2 = ngettext("%d note updated", "%d notes updated",
                          self.updateCount) % self.updateCount
         if self.importMode == 0:
@@ -259,7 +263,7 @@ where id = ? and flds != ?""", rows)
 
     def processFields(self, note, fields=None):
         if not fields:
-            fields = [""]*len(self.model['flds'])
+            fields = [""] * len(self.model['flds'])
         for c, f in enumerate(self.mapping):
             if not f:
                 continue

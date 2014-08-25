@@ -2,11 +2,14 @@
 # Copyright: Damien Elmes <anki@ichi2.net>
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
-import time, re
+import re
+import time
+
 from anki.db import DB
 from anki.importing.noteimp import NoteImporter, ForeignNote, ForeignCard
-from anki.stdmodels import addBasicModel, addClozeModel
 from anki.lang import ngettext
+from anki.stdmodels import addBasicModel, addClozeModel
+
 
 class MnemosyneImporter(NoteImporter):
 
@@ -65,18 +68,18 @@ acq_reps+ret_reps, lapses, card_type_id from cards"""):
                 continue
             # add the card
             c = ForeignCard()
-            c.factor = int(row[5]*1000)
+            c.factor = int(row[5] * 1000)
             c.reps = row[6]
             c.lapses = row[7]
             # ivl is inferred in mnemosyne
             next, prev = row[3:5]
-            c.ivl = max(1, (next - prev)/86400)
+            c.ivl = max(1, (next - prev) / 86400)
             # work out how long we've got left
-            rem = int((next - time.time())/86400)
-            c.due = self.col.sched.today+rem
+            rem = int((next - time.time()) / 86400)
+            c.due = self.col.sched.today + rem
             # get ord
             m = re.search(".(\d+)$", row[1])
-            ord = int(m.group(1))-1
+            ord = int(m.group(1)) - 1
             if 'cards' not in note:
                 note['cards'] = {}
             note['cards'][ord] = c
@@ -88,7 +91,8 @@ acq_reps+ret_reps, lapses, card_type_id from cards"""):
         self.total += total
         self._addCloze(cloze)
         self.total += total
-        self.log.append(ngettext("%d note imported.", "%d notes imported.", self.total) % self.total)
+        self.log.append(ngettext("%d note imported.", "%d notes imported.",
+                                 self.total) % self.total)
 
     def fields(self):
         return self._fields
@@ -166,6 +170,7 @@ acq_reps+ret_reps, lapses, card_type_id from cards"""):
             fld = orig.get("text", "")
             fld = re.sub("\r?\n", "<br>", fld)
             state = dict(n=1)
+
             def repl(match):
                 # replace [...] with cloze refs
                 res = ("{{c%d::%s}}" % (state['n'], match.group(1)))
@@ -174,7 +179,7 @@ acq_reps+ret_reps, lapses, card_type_id from cards"""):
             fld = re.sub("\[(.+?)\]", repl, fld)
             fld = self._mungeField(fld)
             n.fields.append(fld)
-            n.fields.append("") # extra
+            n.fields.append("")  # extra
             n.tags = orig['tags']
             n.cards = orig.get('cards', {})
             data.append(n)

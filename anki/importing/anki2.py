@@ -5,14 +5,14 @@
 import os
 import unicodedata
 from anki import Collection
-from anki.utils import intTime, splitFields, joinFields, incGuid
 from anki.importing.base import Importer
-from anki.lang import _
-from anki.lang import ngettext
+from anki.lang import _, ngettext
+from anki.utils import intTime, splitFields, joinFields, incGuid
 
 GUID = 1
 MID = 2
 MOD = 3
+
 
 class Anki2Importer(Importer):
 
@@ -57,7 +57,7 @@ class Anki2Importer(Importer):
         self._notes = {}
         existing = {}
         for id, guid, mod, mid in self.dst.db.execute(
-            "select id, guid, mod, mid from notes"):
+                "select id, guid, mod, mid from notes"):
             self._notes[guid] = (id, mod, mid)
             existing[id] = True
         # we may need to rewrite the guid if the model schemas don't match,
@@ -70,8 +70,7 @@ class Anki2Importer(Importer):
         usn = self.dst.usn()
         dupes = 0
         dupesIgnored = []
-        for note in self.src.db.execute(
-            "select * from notes"):
+        for note in self.src.db.execute("select * from notes"):
             # turn the db result into a mutable list
             note = list(note)
             shouldAdd = self._uniquifyNote(note)
@@ -109,11 +108,12 @@ class Anki2Importer(Importer):
                                 note[6].replace("\x1f", ",")
                             ))
         if dupes:
-            up = len(update)
+            # up = len(update)
             self.log.append(_("Updated %(a)d of %(b)d existing notes.") % dict(
                 a=len(update), b=dupes))
             if dupesIgnored:
-                self.log.append(_("Some updates were ignored because note type has changed:"))
+                self.log.append(_("Some updates were ignored because note "
+                                  "type has changed:"))
                 self.log.extend(dupesIgnored)
         # export info for calling code
         self.dupes = dupes
@@ -251,8 +251,8 @@ class Anki2Importer(Importer):
         self._cards = {}
         existing = {}
         for guid, ord, cid in self.dst.db.execute(
-            "select f.guid, c.ord, c.id from cards c, notes f "
-            "where c.nid = f.id"):
+                "select f.guid, c.ord, c.id from cards c, notes f "
+                "where c.nid = f.id"):
             existing[cid] = True
             self._cards[(guid, ord)] = cid
         # loop through src
@@ -262,15 +262,15 @@ class Anki2Importer(Importer):
         usn = self.dst.usn()
         aheadBy = self.src.sched.today - self.dst.sched.today
         for card in self.src.db.execute(
-            "select f.guid, f.mid, c.* from cards c, notes f "
-            "where c.nid = f.id"):
+                "select f.guid, f.mid, c.* from cards c, notes f "
+                "where c.nid = f.id"):
             guid = card[0]
             if guid in self._changedGuids:
                 guid = self._changedGuids[guid]
             # does the card's note exist in dst col?
             if guid not in self._notes:
                 continue
-            dnid = self._notes[guid]
+            # dnid = self._notes[guid]
             # does the card already exist in the dst col?
             ord = card[5]
             if (guid, ord) in self._cards:
@@ -299,7 +299,7 @@ class Anki2Importer(Importer):
                 card[8] = card[14]
                 card[14] = 0
                 # queue
-                if card[6] == 1: # type
+                if card[6] == 1:  # type
                     card[7] = 0
                 else:
                     card[7] = card[6]
@@ -309,7 +309,7 @@ class Anki2Importer(Importer):
             cards.append(card)
             # we need to import revlog, rewriting card ids and bumping usn
             for rev in self.src.db.execute(
-                "select * from revlog where cid = ?", scid):
+                    "select * from revlog where cid = ?", scid):
                 rev = list(rev)
                 rev[1] = card[0]
                 rev[2] = self.dst.usn()
@@ -317,10 +317,12 @@ class Anki2Importer(Importer):
             cnt += 1
         # apply
         self.dst.db.executemany("""
-insert or ignore into cards values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", cards)
+insert or ignore into cards values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                                cards)
         self.dst.db.executemany("""
 insert or ignore into revlog values (?,?,?,?,?,?,?,?,?)""", revlog)
-        self.log.append(ngettext("%d card imported.", "%d cards imported.", cnt) % cnt)
+        self.log.append(ngettext("%d card imported.", "%d cards imported.",
+                                 cnt) % cnt)
 
     # Media
     ######################################################################
@@ -365,6 +367,7 @@ insert or ignore into revlog values (?,?,?,?,?,?,?,?,?)""", revlog)
 
     def _mungeMedia(self, mid, fields):
         fields = splitFields(fields)
+
         def repl(match):
             fname = match.group("fname")
             srcData = self._srcMediaData(fname)

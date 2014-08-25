@@ -2,12 +2,14 @@
 # Copyright: Damien Elmes <anki@ichi2.net>
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
-import copy, re
-from anki.utils import intTime, joinFields, splitFields, ids2str,\
-    checksum, json
-from anki.lang import _
-from anki.consts import *
+import copy
+import re
+
+from anki.consts import MODEL_CLOZE, MODEL_STD
 from anki.hooks import runHook
+from anki.lang import _
+from anki.utils import checksum, ids2str, intTime, joinFields, json, \
+    splitFields
 import time
 
 # Models
@@ -30,7 +32,7 @@ defaultModel = {
     'latexPost': "\\end{document}",
     'mod': 0,
     'usn': 0,
-    'vers': [], # FIXME: remove when other clients have caught up
+    'vers': [],  # FIXME: remove when other clients have caught up
     'type': MODEL_STD,
     'css': """\
 .card {
@@ -65,9 +67,10 @@ defaultTemplate = {
     'bqfmt': "",
     'bafmt': "",
     # we don't define these so that we pick up system font size until set
-    #'bfont': "Arial",
-    #'bsize': 12,
+    # 'bfont': "Arial",
+    # 'bsize': 12,
 }
+
 
 class ModelManager(object):
 
@@ -97,7 +100,7 @@ class ModelManager(object):
         "Flush the registry if any models were changed."
         if self.changed:
             self.col.db.execute("update col set models = ?",
-                                 json.dumps(self.models))
+                                json.dumps(self.models))
             self.changed = False
 
     # Retrieving and creating models
@@ -152,7 +155,7 @@ class ModelManager(object):
         # delete notes/cards
         self.col.remCards(self.col.db.list("""
 select id from cards where nid in (select id from notes where mid = ?)""",
-                                      m['id']))
+                                           m['id']))
         # then the model
         del self.models[str(m['id'])]
         self.save()
@@ -168,10 +171,9 @@ select id from cards where nid in (select id from notes where mid = ?)""",
 
     def ensureNameUnique(self, m):
         for mcur in self.all():
-            if (mcur['name'] == m['name'] and
-                mcur['id'] != m['id']):
-                    m['name'] += "-" + checksum(str(time.time()))[:5]
-                    break
+            if (mcur['name'] == m['name'] and mcur['id'] != m['id']):
+                m['name'] += "-" + checksum(str(time.time()))[:5]
+                break
 
     def update(self, m):
         "Add or update an existing model. Used for syncing and merging."
@@ -253,6 +255,7 @@ and notes.mid = ? and cards.ord = ?""", m['id'], ord)
         m['flds'].append(field)
         self._updateFieldOrds(m)
         self.save(m)
+
         def add(fields):
             fields.append("")
             return fields
@@ -271,6 +274,7 @@ and notes.mid = ? and cards.ord = ?""", m['id'], ord)
                 m['sortf'] = c
                 break
         self._updateFieldOrds(m)
+
         def delete(fields):
             del fields[idx]
             return fields
@@ -295,6 +299,7 @@ and notes.mid = ? and cards.ord = ?""", m['id'], ord)
         m['sortf'] = m['flds'].index(sortf)
         self._updateFieldOrds(m)
         self.save(m)
+
         def move(fields, oldidx=oldidx):
             val = fields[oldidx]
             del fields[oldidx]
@@ -305,6 +310,7 @@ and notes.mid = ? and cards.ord = ?""", m['id'], ord)
     def renameField(self, m, field, newName):
         self.col.modSchema()
         pat = r'{{(.*)([:#^/]|[^:#/^}][^:}]*?:|)%s}}'
+
         def wrap(txt):
             def repl(match):
                 return '{{' + match.group(1) + match.group(2) + txt +  '}}'
@@ -316,7 +322,7 @@ and notes.mid = ? and cards.ord = ?""", m['id'], ord)
                         pat % re.escape(field['name']), wrap(newName), t[fmt])
                 else:
                     t[fmt] = re.sub(
-                        pat  % re.escape(field['name']), "", t[fmt])
+                        pat % re.escape(field['name']), "", t[fmt])
         field['name'] = newName
         self.save(m)
 
@@ -330,7 +336,7 @@ and notes.mid = ? and cards.ord = ?""", m['id'], ord)
             return
         r = []
         for (id, flds) in self.col.db.execute(
-            "select id, flds from notes where mid = ?", m['id']):
+                "select id, flds from notes where mid = ?", m['id']):
             r.append((joinFields(fn(splitFields(flds))),
                       intTime(), self.col.usn(), id))
         self.col.db.executemany(
@@ -359,7 +365,7 @@ and notes.mid = ? and cards.ord = ?""", m['id'], ord)
         ord = m['tmpls'].index(template)
         cids = self.col.db.list("""
 select c.id from cards c, notes f where c.nid=f.id and mid = ? and ord = ?""",
-                                 m['id'], ord)
+                                m['id'], ord)
         # all notes with this template must have at least two cards, or we
         # could end up creating orphaned notes
         if self.col.db.scalar("""
@@ -376,7 +382,7 @@ limit 1""" % ids2str(cids)):
         self.col.db.execute("""
 update cards set ord = ord - 1, usn = ?, mod = ?
  where nid in (select id from notes where mid = ?) and ord > ?""",
-                             self.col.usn(), intTime(), m['id'], ord)
+                            self.col.usn(), intTime(), m['id'], ord)
         m['tmpls'].remove(template)
         self._updateTemplOrds(m)
         self.save(m)
@@ -403,10 +409,11 @@ update cards set ord = ord - 1, usn = ?, mod = ?
         self.col.db.execute("""
 update cards set ord = (case %s end),usn=?,mod=? where nid in (
 select id from notes where mid = ?)""" % " ".join(map),
-                             self.col.usn(), intTime(), m['id'])
+                            self.col.usn(), intTime(), m['id'])
 
     def _syncTemplates(self, m):
-        rem = self.col.genCards(self.nids(m))
+        # rem = self.col.genCards(self.nids(m))
+        self.col.genCards(self.nids(m))
 
     # Model changing
     ##########################################################################
@@ -426,7 +433,7 @@ select id from notes where mid = ?)""" % " ".join(map),
         d = []
         nfields = len(newModel['flds'])
         for (nid, flds) in self.col.db.execute(
-            "select id, flds from notes where id in "+ids2str(nids)):
+                "select id, flds from notes where id in " + ids2str(nids)):
             newflds = {}
             flds = splitFields(flds)
             for old, new in map.items():
@@ -436,16 +443,16 @@ select id from notes where mid = ?)""" % " ".join(map),
                 flds.append(newflds.get(c, ""))
             flds = joinFields(flds)
             d.append(dict(nid=nid, flds=flds, mid=newModel['id'],
-                      m=intTime(),u=self.col.usn()))
-        self.col.db.executemany(
-            "update notes set flds=:flds,mid=:mid,mod=:m,usn=:u where id = :nid", d)
+                          m=intTime(), u=self.col.usn()))
+        self.col.db.executemany("""\
+update notes set flds=:flds,mid=:mid,mod=:m,usn=:u where id = :nid""", d)
         self.col.updateFieldCache(nids)
 
     def _changeCards(self, nids, oldModel, newModel, map):
         d = []
         deleted = []
         for (cid, ord) in self.col.db.execute(
-            "select id, ord from cards where nid in "+ids2str(nids)):
+                "select id, ord from cards where nid in " + ids2str(nids)):
             # if the src model is a cloze, we ignore the map, as the gui
             # doesn't currently support mapping them
             if oldModel['type'] == MODEL_CLOZE:
@@ -460,7 +467,7 @@ select id from notes where mid = ?)""" % " ".join(map),
                 new = map[ord]
             if new is not None:
                 d.append(dict(
-                    cid=cid,new=new,u=self.col.usn(),m=intTime()))
+                    cid=cid, new=new, u=self.col.usn(), m=intTime()))
             else:
                 deleted.append(cid)
         self.col.db.executemany(
@@ -569,13 +576,14 @@ select id from notes where mid = ?)""" % " ".join(map),
         sflds = splitFields(flds)
         map = self.fieldMap(m)
         ords = set()
-        matches = re.findall("{{[^}]*?cloze:(?:[^}]?:)*(.+?)}}", m['tmpls'][0]['qfmt'])
+        matches = re.findall(
+            "{{[^}]*?cloze:(?:[^}]?:)*(.+?)}}", m['tmpls'][0]['qfmt'])
         matches += re.findall("<%cloze:(.+?)%>", m['tmpls'][0]['qfmt'])
         for fname in matches:
             if fname not in map:
                 continue
             ord = map[fname][0]
-            ords.update([int(m)-1 for m in re.findall(
+            ords.update([int(c_ord) - 1 for c_ord in re.findall(
                 "{{c(\d+)::.+?}}", sflds[ord])])
         if -1 in ords:
             ords.remove(-1)

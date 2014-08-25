@@ -46,35 +46,31 @@ MODEL_CLOZE = 1
 
 # deck schema & syncing vars
 SCHEMA_VERSION = 11
-SYNC_ZIP_SIZE = int(2.5*1024*1024)
+SYNC_ZIP_SIZE = int(2.5 * 1024 * 1024)
 SYNC_ZIP_COUNT = 25
 SYNC_BASE = "https://ankiweb.net/"
 SYNC_VER = 8
 
-HELP_SITE="http://ankisrs.net/docs/manual.html"
+HELP_SITE = "http://ankisrs.net/docs/manual.html"
 
 # Labels
 ##########################################################################
 
+
 def newCardOrderLabels():
-    return {
-        0: _("Show new cards in random order"),
-        1: _("Show new cards in order added")
-        }
+    return {0: _("Show new cards in random order"),
+            1: _("Show new cards in order added")}
+
 
 def newCardSchedulingLabels():
-    return {
-        0: _("Mix new cards and reviews"),
-        1: _("Show new cards after reviews"),
-        2: _("Show new cards before reviews"),
-        }
+    return {0: _("Mix new cards and reviews"),
+            1: _("Show new cards after reviews"),
+            2: _("Show new cards before reviews")}
+
 
 def alignmentLabels():
-    return {
-        0: _("Center"),
-        1: _("Left"),
-        2: _("Right"),
-        }
+    return {0: _("Center"), 1: _("Left"), 2: _("Right")}
+
 
 def dynOrderLabels():
     return {
@@ -86,5 +82,4 @@ def dynOrderLabels():
         5: _("Order added"),
         6: _("Order due"),
         7: _("Latest added first"),
-        8: _("Relative overdueness"),
-        }
+        8: _("Relative overdueness")}
