@@ -12,15 +12,22 @@ import cPickle
 import locale
 import re
 
-from aqt.qt import *
+from PyQt4.QtCore import SIGNAL
+from PyQt4.QtGui import QDialog, QMessageBox
+
 from anki.db import DB
-from anki.utils import isMac, isWin, intTime, checksum
-from anki.lang import langs
-from aqt.utils import showWarning
+from anki.lang import _, langs
+from anki.utils import checksum, intTime, isMac, isWin
 from aqt import appHelpSite
+from aqt.qt import qtmajor
+from aqt.utils import showWarning
 import aqt.forms
 from send2trash import send2trash
 
+if qtmajor >= 5:
+    from PyQt4.QtCore import QStandardPaths
+else:
+    from PyQt4.QtGui import QDesktopServices
 
 metaConf = dict(
     ver=0,
@@ -31,8 +38,7 @@ metaConf = dict(
     suppressUpdate=False,
     firstRun=True,
     defaultLang=None,
-    disabledAddons=[],
-)
+    disabledAddons=[])
 
 profileConf = dict(
     # profile
@@ -58,6 +64,7 @@ profileConf = dict(
     allowHTML=False,
     importMode=1,
 )
+
 
 class ProfileManager(object):
 
@@ -153,7 +160,7 @@ a flash drive.""" % self.base)
                     oldFolder = midFolder
                 else:
                     showWarning(_("Please remove the folder %s and try again.")
-                            % midFolder)
+                                % midFolder)
                     self.name = oldName
                     return
             else:
@@ -211,10 +218,12 @@ and no other programs are accessing your profile folders, then try again."""))
 
     def _defaultBase(self):
         if isWin:
-            if False: #qtmajor >= 5:
-                loc = QStandardPaths.writeableLocation(QStandardPaths.DocumentsLocation)
+            if False:  # qtmajor >= 5:
+                loc = QStandardPaths.writeableLocation(
+                    QStandardPaths.DocumentsLocation)
             else:
-                loc = QDesktopServices.storageLocation(QDesktopServices.DocumentsLocation)
+                loc = QDesktopServices.storageLocation(
+                    QDesktopServices.DocumentsLocation)
             return os.path.join(loc, "Anki")
         elif isMac:
             return os.path.expanduser("~/Documents/Anki")
@@ -237,6 +246,7 @@ and no other programs are accessing your profile folders, then try again."""))
     def _loadMeta(self):
         path = os.path.join(self.base, "prefs.db")
         new = not os.path.exists(path)
+
         def recover():
             # if we can't load profile, start with a new one
             if self.db:
@@ -250,8 +260,9 @@ and no other programs are accessing your profile folders, then try again."""))
             os.rename(path, broken)
             QMessageBox.warning(
                 None, "Preferences Corrupt", """\
-Anki's prefs.db file was corrupt and has been recreated. If you were using multiple \
-profiles, please add them back using the same names to recover your cards.""")
+Anki's prefs.db file was corrupt and has been recreated. If you were \
+using multiple profiles, please add them back using the same names \
+to recover your cards.""")
         try:
             self.db = DB(path, text=str)
             self.db.execute("""
@@ -272,8 +283,9 @@ create table if not exists profiles
                 return self._loadMeta()
         # create a default global profile
         self.meta = metaConf.copy()
-        self.db.execute("insert or replace into profiles values ('_global', ?)",
-                        cPickle.dumps(metaConf))
+        self.db.execute(
+            "insert or replace into profiles values ('_global', ?)",
+            cPickle.dumps(metaConf))
         self._setDefaultLang()
         return True
 
@@ -288,10 +300,10 @@ to make backups easy. To tell Anki to use a different location,
 please see:
 
 %s
-""") % (appHelpSite +  "#startupopts")).encode("utf8"))
+""") % (appHelpSite + "#startupopts")).encode("utf8"))
 
     def _pwhash(self, passwd):
-        return checksum(unicode(self.meta['id'])+unicode(passwd))
+        return checksum(unicode(self.meta['id']) + unicode(passwd))
 
     # Default language
     ######################################################################
@@ -303,6 +315,7 @@ please see:
         import __builtin__
         __builtin__.__dict__['_'] = lambda x: x
         # create dialog
+
         class NoCloseDiag(QDialog):
             def reject(self):
                 pass
@@ -342,7 +355,7 @@ please see:
         name = obj[0]
         en = "Are you sure you wish to display Anki's interface in %s?"
         r = QMessageBox.question(
-            None, "Anki", en%name, QMessageBox.Yes | QMessageBox.No,
+            None, "Anki", en % name, QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No)
         if r != QMessageBox.Yes:
             return self._setDefaultLang()

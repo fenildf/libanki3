@@ -2,17 +2,19 @@
 # Copyright: petr.michalec@gmail.com
 # License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
+from string import capwords
+from types import DictType, InstanceType
+from xml.dom import minidom
+import re
 import sys
+import time
+import unicodedata
 
-from anki.stdmodels import addBasicModel
 from anki.importing.noteimp import NoteImporter, ForeignNote, ForeignCard
 from anki.lang import _
 from anki.lang import ngettext
+from anki.stdmodels import addBasicModel
 
-from xml.dom import minidom
-from types import DictType, InstanceType
-from string import capwords
-import re, unicodedata, time
 
 class SmartDict(dict):
     """
@@ -31,35 +33,37 @@ class SmartDict(dict):
                 kw.update(a[0])
             elif type(a[0]) is InstanceType:
                 kw.update(a[0].__dict__)
-            elif hasattr(a[0], '__class__') and a[0].__class__.__name__=='SmartDict':
+            elif hasattr(a[0], '__class__') \
+                    and a[0].__class__.__name__ == 'SmartDict':
                 kw.update(a[0].__dict__)
 
         dict.__init__(self, **kw)
         self.__dict__ = self
 
+
 class SuperMemoElement(SmartDict):
-  "SmartDict wrapper to store SM Element data"
+    "SmartDict wrapper to store SM Element data"
 
-  def __init__(self, *a, **kw):
-    SmartDict.__init__(self, *a, **kw)
-    #default content
-    self.__dict__['lTitle'] = None
-    self.__dict__['Title'] = None
-    self.__dict__['Question'] = None
-    self.__dict__['Answer'] = None
-    self.__dict__['Count'] = None
-    self.__dict__['Type'] = None
-    self.__dict__['ID'] = None
-    self.__dict__['Interval'] = None
-    self.__dict__['Lapses'] = None
-    self.__dict__['Repetitions'] = None
-    self.__dict__['LastRepetiton'] = None
-    self.__dict__['AFactor'] = None
-    self.__dict__['UFactor'] = None
-
-
+    def __init__(self, *a, **kw):
+        SmartDict.__init__(self, *a, **kw)
+        # default content
+        self.__dict__['lTitle'] = None
+        self.__dict__['Title'] = None
+        self.__dict__['Question'] = None
+        self.__dict__['Answer'] = None
+        self.__dict__['Count'] = None
+        self.__dict__['Type'] = None
+        self.__dict__['ID'] = None
+        self.__dict__['Interval'] = None
+        self.__dict__['Lapses'] = None
+        self.__dict__['Repetitions'] = None
+        self.__dict__['LastRepetiton'] = None
+        self.__dict__['AFactor'] = None
+        self.__dict__['UFactor'] = None
 
 # This is an AnkiImporter
+
+
 class SupermemoXmlImporter(NoteImporter):
 
     needMapper = False
@@ -89,35 +93,40 @@ class SupermemoXmlImporter(NoteImporter):
         self.initMapping()
 
         self.lines = None
-        self.numFields=int(2)
+        self.numFields = int(2)
 
         # SmXmlParse VARIABLES
         self.xmldoc = None
         self.pieces = []
-        self.cntBuf = [] #to store last parsed data
-        self.cntElm = [] #to store SM Elements data
-        self.cntCol = [] #to store SM Colections data
+        self.cntBuf = []  # to store last parsed data
+        self.cntElm = []  # to store SM Elements data
+        self.cntCol = []  # to store SM Colections data
 
         # store some meta info related to parse algorithm
         # SmartDict works like dict / class wrapper
         self.cntMeta = SmartDict()
         self.cntMeta.popTitles = False
-        self.cntMeta.title     = []
+        self.cntMeta.title = []
 
         # META stores controls of import scritp, should be
         # exposed to import dialog. These are default values.
         self.META = SmartDict()
-        self.META.resetLearningData  = False            # implemented
-        self.META.onlyMemorizedItems = False            # implemented
-        self.META.loggerLevel = 2                       # implemented 0no,1info,2error,3debug
+        self.META.resetLearningData = False  # implemented
+        self.META.onlyMemorizedItems = False  # implemented
+        self.META.loggerLevel = 2             # implemented
+        # 0no,1info,2error,3debug
         self.META.tagAllTopics = True
-        self.META.pathsToBeTagged = ['English for begginers', 'Advanced English 97', 'Phrasal Verbs']                # path patterns to be tagged - in gui entered like 'Advanced English 97|My Vocablary'
+        # path patterns to be tagged - in gui entered like 'Advanced
+        # English 97|My Vocablary'
+        self.META.pathsToBeTagged = ['English for begginers',  # sic
+                                     'Advanced English 97',
+                                     'Phrasal Verbs']
         self.META.tagMemorizedItems = True              # implemented
-        self.META.logToStdOutput   = False              # implemented
+        self.META.logToStdOutput = False              # implemented
 
         self.notes = []
 
-## TOOLS
+# TOOLS
 
     def _fudgeText(self, text):
         "Replace sm syntax to Anki syntax"
@@ -125,22 +134,27 @@ class SupermemoXmlImporter(NoteImporter):
         text = text.replace("\n", u"<br>")
         return text
 
-    def _unicode2ascii(self,str):
+    def _unicode2ascii(self, str):
         "Remove diacritic punctuation from strings (titles)"
-        return u"".join([ c for c in unicodedata.normalize('NFKD', str) if not unicodedata.combining(c)])
+        return u"".join([c for c in unicodedata.normalize('NFKD', str)
+                         if not unicodedata.combining(c)])
 
-    def _decode_htmlescapes(self,s):
+    def _decode_htmlescapes(self, s):
         """Unescape HTML code."""
-        #In case of bad formated html you can import MinimalSoup etc.. see btflsoup source code
+        # In case of bad formated html you can import MinimalSoup
+        # etc.. see btflsoup source code
         from BeautifulSoup import BeautifulStoneSoup as btflsoup
 
-        #my sm2004 also ecaped & char in escaped sequences.
-        s = re.sub(u'&amp;',u'&',s)
-        #unescaped solitary chars < or > that were ok for minidom confuse btfl soup
-        #s = re.sub(u'>',u'&gt;',s)
-        #s = re.sub(u'<',u'&lt;',s)
+        # my sm2004 also ecaped & char in escaped sequences.
+        s = re.sub(u'&amp;', u'&', s)
+        # unescaped solitary chars < or > that were ok for minidom
+        # confuse btfl soup
+        # s = re.sub(u'>',u'&gt;',s)
+        # s = re.sub(u'<',u'&lt;',s)
 
-        return unicode(btflsoup(s, selfClosingTags=['br','hr','img','wbr'], convertEntities=btflsoup.HTML_ENTITIES))
+        return unicode(
+            btflsoup(s, selfClosingTags=['br', 'hr', 'img', ' wbr'],
+                     convertEntities=btflsoup.HTML_ENTITIES))
 
     def _afactor2efactor(self, af):
         # Adapted from <http://www.supermemo.com/beta/xml/xml-core.htm>
@@ -164,48 +178,50 @@ class SupermemoXmlImporter(NoteImporter):
 
         return ef
 
-## DEFAULT IMPORTER METHODS
+# # DEFAULT IMPORTER METHODS
 
     def foreignNotes(self):
 
         # Load file and parse it by minidom
         self.loadSource(self.file)
 
-        # Migrating content / time consuming part
-        # addItemToCards is called for each sm element
+        # Migrating content / time consuming part addItemToCards is
+        # called for each sm element
         self.logger(u'Parsing started.')
         self.parse()
         self.logger(u'Parsing done.')
 
         # Return imported cards
         self.total = len(self.notes)
-        self.log.append(ngettext("%d card imported.", "%d cards imported.", self.total) % self.total)
+        self.log.append(ngettext("%d card imported.", "%d cards imported.",
+                                 self.total) % self.total)
         return self.notes
 
     def fields(self):
         return 2
 
-## PARSER METHODS
+# # PARSER METHODS
 
-    def addItemToCards(self,item):
+    def addItemToCards(self, item):
         "This method actually do conversion"
 
         # new anki card
         note = ForeignNote()
 
         # clean Q and A
-        note.fields.append(self._fudgeText(self._decode_htmlescapes(item.Question)))
-        note.fields.append(self._fudgeText(self._decode_htmlescapes(item.Answer)))
+        note.fields.append(
+            self._fudgeText(self._decode_htmlescapes(item.Question)))
+        note.fields.append(
+            self._fudgeText(self._decode_htmlescapes(item.Answer)))
         note.tags = []
 
-        # pre-process scheduling data
-        # convert learning data
-        if (not self.META.resetLearningData
-            and item.Interval >= 1
-            and getattr(item, "LastRepetition", None)):
+        # pre-process scheduling data convert learning data
+        if not self.META.resetLearningData and item.Interval >= 1 \
+                and getattr(item, "LastRepetition", None):
             # migration of LearningData algorithm
-            tLastrep = time.mktime(time.strptime(item.LastRepetition, '%d.%m.%Y'))
-            tToday = time.time()
+            tLastrep = time.mktime(
+                time.strptime(item.LastRepetition, '%d.%m.%Y'))
+            # tToday = time.time()
             card = ForeignCard()
             card.ivl = int(item.Interval)
             card.lapses = int(item.Lapses)
@@ -213,53 +229,62 @@ class SupermemoXmlImporter(NoteImporter):
             nextDue = tLastrep + (float(item.Interval) * 86400.0)
             remDays = int((nextDue - time.time())/86400)
             card.due = self.col.sched.today+remDays
-            card.factor = int(self._afactor2efactor(float(item.AFactor.replace(',','.')))*1000)
+            card.factor = int(
+                self._afactor2efactor(float(item.AFactor.replace(',', '.')))
+                * 1000)
             note.cards[0] = card
 
         # categories & tags
-        # it's worth to have every theme (tree structure of sm collection) stored in tags, but sometimes not
-        # you can deceide if you are going to tag all toppics or just that containing some pattern
+        # it's worth to have every theme (tree structure of sm
+        # collection) stored in tags, but sometimes not you can
+        # deceide if you are going to tag all toppics or just that
+        # containing some pattern
         tTaggTitle = False
         for pattern in self.META.pathsToBeTagged:
-            if item.lTitle != None and pattern.lower() in u" ".join(item.lTitle).lower():
-              tTaggTitle = True
-              break
+            if item.lTitle is not None and pattern.lower() in u" ".join(
+                    item.lTitle).lower():
+                tTaggTitle = True
+                break
         if tTaggTitle or self.META.tagAllTopics:
-          # normalize - remove diacritic punctuation from unicode chars to ascii
-          item.lTitle = [ self._unicode2ascii(topic) for topic in item.lTitle]
+            # normalize - remove diacritic punctuation from unicode
+            # chars to ascii
+            item.lTitle = [self._unicode2ascii(topic) for topic in item.lTitle]
 
-          # Transfrom xyz / aaa / bbb / ccc on Title path to Tag  xyzAaaBbbCcc
-          #  clean things like [999] or [111-2222] from title path, example: xyz / [1000-1200] zyx / xyz
-          #  clean whitespaces
-          #  set Capital letters for first char of the word
-          tmp = list(set([ re.sub('(\[[0-9]+\])'   , ' ' , i ).replace('_',' ')  for i in item.lTitle ]))
-          tmp = list(set([ re.sub('(\W)',' ', i )  for i in tmp ]))
-          tmp = list(set([ re.sub( '^[0-9 ]+$','',i)  for i in tmp ]))
-          tmp = list(set([ capwords(i).replace(' ','')  for i in tmp ]))
-          tags = [ j[0].lower() + j[1:] for j in tmp if j.strip() <> '']
+            # Transfrom xyz / aaa / bbb / ccc on Title path to Tag
+            # xyzAaaBbbCcc
+            #  clean things like [999] or [111-2222] from title path,
+            #  example: xyz / [1000-1200] zyx / xyz
+            #  clean whitespaces
+            #  set Capital letters for first char of the word
+            tmp = list(set([re.sub('(\[[0-9]+\])', ' ', i).replace('_', ' ')
+                            for i in item.lTitle]))
+            tmp = list(set([re.sub('(\W)', ' ', i) for i in tmp]))
+            tmp = list(set([re.sub('^[0-9]+$', '', i) for i in tmp]))
+            tmp = list(set([capwords(i).replace(' ', '') for i in tmp]))
+            tags = [j[0].lower() + j[1:] for j in tmp if j.strip() != '']
 
-          note.tags += tags
+            note.tags += tags
 
-          if self.META.tagMemorizedItems and item.Interval >0:
-            note.tags.append("Memorized")
+            if self.META.tagMemorizedItems and item.Interval > 0:
+                note.tags.append("Memorized")
 
-          self.logger(u'Element tags\t- ' + `note.tags`, level=3)
+            self.logger(u'Element tags\t- ' + repr(note.tags), level=3)
 
         self.notes.append(note)
 
-    def logger(self,text,level=1):
+    def logger(self, text, level=1):
         "Wrapper for Anki logger"
 
-        dLevels={0:'',1:u'Info',2:u'Verbose',3:u'Debug'}
-        if level<=self.META.loggerLevel:
-          #self.deck.updateProgress(_(text))
+        dLevels = {0: '', 1: u'Info', 2: u'Verbose', 3: u'Debug'}
+        if level <= self.META.loggerLevel:
+            # self.deck.updateProgress(_(text))
 
-          if self.META.logToStdOutput:
-            print self.__class__.__name__+ u" - " + dLevels[level].ljust(9) +u' -\t'+ _(text)
-
+            if self.META.logToStdOutput:
+                print self.__class__.__name__ + u" - " + \
+                    dLevels[level].ljust(9) + u' -\t' + _(text)
 
     # OPEN AND LOAD
-    def openAnything(self,source):
+    def openAnything(self, source):
         "Open any source / actually only openig of files is used"
 
         if source == "-":
@@ -291,20 +316,19 @@ class SupermemoXmlImporter(NoteImporter):
         sock.close()
         self.logger(u'Load done.')
 
-
     # PARSE
     def parse(self, node=None):
         "Parse method - parses document elements"
 
-        if node==None and self.xmldoc<>None:
-          node = self.xmldoc
+        if node is None and self.xmldoc is not None:
+            node = self.xmldoc
 
         _method = "parse_%s" % node.__class__.__name__
-        if hasattr(self,_method):
-          parseMethod = getattr(self, _method)
-          parseMethod(node)
+        if hasattr(self, _method):
+            parseMethod = getattr(self, _method)
+            parseMethod(node)
         else:
-          self.logger(u'No handler for method %s' % _method, level=3)
+            self.logger(u'No handler for method %s' % _method, level=3)
 
     def parse_Document(self, node):
         "Parse XML document"
@@ -315,12 +339,12 @@ class SupermemoXmlImporter(NoteImporter):
         "Parse XML element"
 
         _method = "do_%s" % node.tagName
-        if hasattr(self,_method):
-          handlerMethod = getattr(self, _method)
-          handlerMethod(node)
+        if hasattr(self, _method):
+            handlerMethod = getattr(self, _method)
+            handlerMethod(node)
         else:
-          self.logger(u'No handler for method %s' % _method, level=3)
-          #print traceback.print_exc()
+            self.logger(u'No handler for method %s' % _method, level=3)
+            # print traceback.print_exc()
 
     def parse_Text(self, node):
         "Parse text inside elements. Text is stored into local buffer."
@@ -328,90 +352,98 @@ class SupermemoXmlImporter(NoteImporter):
         text = node.data
         self.cntBuf.append(text)
 
-    #def parse_Comment(self, node):
+    # def parse_Comment(self, node):
     #    """
     #    Source can contain XML comments, but we ignore them
     #    """
     #    pass
 
-
     # DO
     def do_SuperMemoCollection(self, node):
         "Process SM Collection"
 
-        for child in node.childNodes: self.parse(child)
+        for child in node.childNodes:
+            self.parse(child)
 
     def do_SuperMemoElement(self, node):
         "Process SM Element (Type - Title,Topics)"
 
-        self.logger('='*45, level=3)
+        self.logger('=' * 45, level=3)
 
         self.cntElm.append(SuperMemoElement())
         self.cntElm[-1]['lTitle'] = self.cntMeta['title']
 
-        #parse all child elements
-        for child in node.childNodes: self.parse(child)
+        # parse all child elements
+        for child in node.childNodes:
+            self.parse(child)
 
-        #strip all saved strings, just for sure
+        # strip all saved strings, just for sure
         for key in self.cntElm[-1].keys():
-          if hasattr(self.cntElm[-1][key], 'strip'):
-            self.cntElm[-1][key]=self.cntElm[-1][key].strip()
+            if hasattr(self.cntElm[-1][key], 'strip'):
+                self.cntElm[-1][key] = self.cntElm[-1][key].strip()
 
-        #pop current element
+        # pop current element
         smel = self.cntElm.pop()
 
         # Process cntElm if is valid Item (and not an Topic etc..)
-        # if smel.Lapses != None and smel.Interval != None and smel.Question != None and smel.Answer != None:
-        if smel.Title == None and smel.Question != None and smel.Answer != None:
-          if smel.Answer.strip() !='' and smel.Question.strip() !='':
+        # if smel.Lapses != None and smel.Interval != None and
+        # smel.Question != None and smel.Answer != None:
+        if smel.Title is None and smel.Question is not None \
+                and smel.Answer is not None:
+            if smel.Answer.strip() != '' and smel.Question.strip() != '':
 
-            # migrate only memorized otherway skip/continue
-            if self.META.onlyMemorizedItems and not(int(smel.Interval) > 0):
-              self.logger(u'Element skiped  \t- not memorized ...', level=3)
+                # migrate only memorized otherway skip/continue
+                if self.META.onlyMemorizedItems and not(
+                        int(smel.Interval) > 0):
+                    self.logger(
+                        u'Element skiped  \t- not memorized ...', level=3)
+                else:
+                    # import sm element data to Anki
+                    self.addItemToCards(smel)
+                    self.logger(
+                        u"Import element \t- " + smel['Question'], level=3)
+
+                    # print element
+                    self.logger('-' * 45, level=3)
+                    for key in smel.keys():
+                        self.logger(
+                            '\t%s %s' % (
+                                (key + ':').ljust(15), smel[key]), level=3)
             else:
-              #import sm element data to Anki
-              self.addItemToCards(smel)
-              self.logger(u"Import element \t- " + smel['Question'], level=3)
-
-              #print element
-              self.logger('-'*45, level=3)
-              for key in smel.keys():
-                self.logger('\t%s %s' % ((key+':').ljust(15),smel[key]), level=3 )
-          else:
-            self.logger(u'Element skiped  \t- no valid Q and A ...', level=3)
-
+                self.logger(
+                    u'Element skiped  \t- no valid Q and A ...', level=3)
 
         else:
-          # now we know that item was topic
-          # parseing of whole node is now finished
+            # now we know that item was topic
+            # parseing of whole node is now finished
 
-          # test if it's really topic
-          if smel.Title != None:
-            # remove topic from title list
-            t = self.cntMeta['title'].pop()
-            self.logger(u'End of topic \t- %s' % (t), level=2)
+            # test if it's really topic
+            if smel.Title is not None:
+                # remove topic from title list
+                t = self.cntMeta['title'].pop()
+                self.logger(u'End of topic \t- %s' % (t), level=2)
 
     def do_Content(self, node):
         "Process SM element Content"
 
         for child in node.childNodes:
-          if hasattr(child,'tagName') and child.firstChild != None:
-            self.cntElm[-1][child.tagName]=child.firstChild.data
+            if hasattr(child, 'tagName') and child.firstChild is not None:
+                self.cntElm[-1][child.tagName] = child.firstChild.data
 
     def do_LearningData(self, node):
         "Process SM element LearningData"
 
         for child in node.childNodes:
-          if hasattr(child,'tagName') and child.firstChild != None:
-            self.cntElm[-1][child.tagName]=child.firstChild.data
+            if hasattr(child, 'tagName') and child.firstChild is not None:
+                self.cntElm[-1][child.tagName] = child.firstChild.data
 
     # It's being processed in do_Content now
-    #def do_Question(self, node):
+    # def do_Question(self, node):
     #    for child in node.childNodes: self.parse(child)
     #    self.cntElm[-1][node.tagName]=self.cntBuf.pop()
 
     # It's being processed in do_Content now
-    #def do_Answer(self, node):
+    # def do_Answer(self, node):
     #    for child in node.childNodes: self.parse(child)
     #    self.cntElm[-1][node.tagName]=self.cntBuf.pop()
 
@@ -422,27 +454,12 @@ class SupermemoXmlImporter(NoteImporter):
         self.cntElm[-1][node.tagName] = t
         self.cntMeta['title'].append(t)
         self.cntElm[-1]['lTitle'] = self.cntMeta['title']
-        self.logger(u'Start of topic \t- ' + u" / ".join(self.cntMeta['title']), level=2)
-
+        self.logger(
+            u'Start of topic \t- '
+            + u" / ".join(self.cntMeta['title']), level=2)
 
     def do_Type(self, node):
         "Process SM element Type"
 
-        if len(self.cntBuf) >=1 :
-          self.cntElm[-1][node.tagName]=self.cntBuf.pop()
-
-
-if __name__ == '__main__':
-
-  # for testing you can start it standalone
-
-  #file = u'/home/epcim/hg2g/dev/python/sm2anki/ADVENG2EXP.xxe.esc.zaloha_FINAL.xml'
-  #file = u'/home/epcim/hg2g/dev/python/anki/libanki/tests/importing/supermemo/original_ENGLISHFORBEGGINERS_noOEM.xml'
-  #file = u'/home/epcim/hg2g/dev/python/anki/libanki/tests/importing/supermemo/original_ENGLISHFORBEGGINERS_oem_1250.xml'
-  file = str(sys.argv[1])
-  impo = SupermemoXmlImporter(Deck(),file)
-  impo.foreignCards()
-
-  sys.exit(1)
-
-# vim: ts=4 sts=2 ft=python
+        if len(self.cntBuf) >= 1:
+            self.cntElm[-1][node.tagName] = self.cntBuf.pop()

@@ -1,27 +1,34 @@
 # -*- coding: utf-8 -*-
 # Copyright: Damien Elmes <anki@ichi2.net>
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
-import re
-import os
-import urllib2
-import ctypes
-import urllib
 
-from anki.lang import _
-from aqt.qt import *
-from anki.utils import stripHTML, isWin, isMac, namedtmp, json, stripHTMLMedia
-import anki.sound
+from BeautifulSoup import BeautifulSoup
+from PyQt4.QtCore import QMimeData, Qt, SIGNAL
+from PyQt4.QtGui import QClipboard, QColor, QColorDialog, QCursor, QDialog, \
+    QDropEvent, QFrame, QGridLayout, QGroupBox, QHBoxLayout, QIcon, QImage, \
+    QKeySequence, QLabel, QMenu, QPalette, QPushButton, QShortcut, \
+    QSizePolicy, QSpacerItem, QStyleFactory, QTextCursor, QVBoxLayout
+from PyQt4.QtWebKit import QWebPage, QWebView
+
+import ctypes
+import os
+import re
+import urllib
+import urllib2
+
 from anki.hooks import runHook, runFilter
+from anki.lang import _
+from anki.utils import isMac, isWin, json, namedtmp, stripHTML, stripHTMLMedia
 from aqt.sound import getAudio
 from aqt.webview import AnkiWebView
 from aqt.utils import shortcut, showInfo, showWarning, getBase, getFile, \
     openHelp, tooltip
 import aqt
 import anki.js
-from BeautifulSoup import BeautifulSoup
 
 pics = ("jpg", "jpeg", "png", "tif", "tiff", "gif", "svg")
-audio =  ("wav", "mp3", "ogg", "flac", "mp4", "swf", "mov", "mpeg", "mkv", "m4a")
+audio = (
+    "wav", "mp3", "ogg", "flac", "mp4", "swf", "mov", "mpeg", "mkv", "m4a")
 
 _html = """
 <html><head>%s<style>
@@ -109,11 +116,11 @@ function onFocus(elem) {
     setTimeout(function () { caretToEnd() }, 1);
     // scroll if bottom of element off the screen
     function pos(obj) {
-    	var cur = 0;
+        var cur = 0;
         do {
           cur += obj.offsetTop;
          } while (obj = obj.offsetParent);
-    	return cur;
+        return cur;
     }
     var y = pos(elem);
     if ((window.pageYOffset+window.innerHeight) < (y+elem.offsetHeight) ||
@@ -191,8 +198,10 @@ function setFields(fields, focusTo) {
         if (!f) {
             f = "<br>";
         }
-        txt += "<tr><td class=fname>{0}</td></tr><tr><td width=100%%>".format(n);
-        txt += "<div id=f{0} onkeydown='onKey();' onmouseup='onKey();'".format(i);
+        txt +=
+            "<tr><td class=fname>{0}</td></tr><tr><td width=100%%>".format(n);
+        txt +=
+            "<div id=f{0} onkeydown='onKey();' onmouseup='onKey();'".format(i);
         txt += " onfocus='onFocus(this);' onblur='onBlur();' class=field ";
         txt += "ondragover='onDragOver(this);' ";
         txt += "contentEditable=true class=field>{0}</div>".format(f);
@@ -258,9 +267,12 @@ document.onclick = function (evt) {
 
 </script></head><body>
 <div id="fields"></div>
-<div id="dupes"><a href="#" onclick="py.run('dupes');return false;">%s</a></div>
+<div id="dupes">
+  <a href="#" onclick="py.run('dupes');return false;">%s</a>
+</div>
 </body></html>
 """
+
 
 # caller is responsible for resetting note on reset
 class Editor(object):
@@ -316,8 +328,7 @@ class Editor(object):
             b.setFixedHeight(20)
             b.setFixedWidth(20)
         if not native:
-            if self.plastiqueStyle:
-               b.setStyle(self.plastiqueStyle)
+            b.setStyle(self.plastiqueStyle)
             b.setFocusPolicy(Qt.NoFocus)
         else:
             b.setAutoDefault(False)
@@ -337,37 +348,33 @@ class Editor(object):
     def setupButtons(self):
         self._buttons = {}
         # button styles for mac
-        if not isMac:
-            self.plastiqueStyle = QStyleFactory.create("plastique")
-            if not self.plastiqueStyle:
-                # plastique was removed in qt5
-                self.plastiqueStyle = QStyleFactory.create("fusion")
-            self.widget.setStyle(self.plastiqueStyle)
-        else:
-            self.plastiqueStyle = None
+        self.plastiqueStyle = QStyleFactory.create("plastique")
+        if not self.plastiqueStyle:
+            # plastique was removed in qt5
+            self.plastiqueStyle = QStyleFactory.create("fusion")
+        self.widget.setStyle(self.plastiqueStyle)
         # icons
         self.iconsBox = QHBoxLayout()
         if not isMac:
             self.iconsBox.setMargin(6)
-            self.iconsBox.setSpacing(0)
         else:
             self.iconsBox.setMargin(0)
-            self.iconsBox.setSpacing(14)
+        self.iconsBox.setSpacing(0)
         self.outerLayout.addLayout(self.iconsBox)
         b = self._addButton
         b("fields", self.onFields, "",
           shortcut(_("Customize Fields")), size=False, text=_("Fields..."),
           native=True, canDisable=False)
-        self.iconsBox.addItem(QSpacerItem(6,1, QSizePolicy.Fixed))
+        self.iconsBox.addItem(QSpacerItem(6, 1, QSizePolicy.Fixed))
         b("layout", self.onCardLayout, _("Ctrl+L"),
           shortcut(_("Customize Cards (Ctrl+L)")),
           size=False, text=_("Cards..."), native=True, canDisable=False)
         # align to right
-        self.iconsBox.addItem(QSpacerItem(20,1, QSizePolicy.Expanding))
+        self.iconsBox.addItem(QSpacerItem(20, 1, QSizePolicy.Expanding))
         b("text_bold", self.toggleBold, _("Ctrl+B"), _("Bold text (Ctrl+B)"),
           check=True)
-        b("text_italic", self.toggleItalic, _("Ctrl+I"), _("Italic text (Ctrl+I)"),
-          check=True)
+        b("text_italic", self.toggleItalic, _("Ctrl+I"),
+          _("Italic text (Ctrl+I)"), check=True)
         b("text_under", self.toggleUnderline, _("Ctrl+U"),
           _("Underline text (Ctrl+U)"), check=True)
         b("text_super", self.toggleSuper, _("Ctrl+Shift+="),
@@ -380,7 +387,7 @@ class Editor(object):
         but.setToolTip(_("Set foreground colour (F7)"))
         self.setupForegroundButton(but)
         but = b("change_colour", self.onChangeCol, _("F8"),
-          _("Change colour (F8)"), text=u"▾")
+                _("Change colour (F8)"), text=u"▾")
         but.setFixedWidth(12)
         but = b("cloze", self.onCloze, _("Ctrl+Shift+C"),
                 _("Cloze deletion (Ctrl+Shift+C)"), text="[...]")
@@ -427,11 +434,11 @@ class Editor(object):
             ord = 0
         # passing parentWindow leads to crash on windows at the moment
         if isWin:
-            parent=None
+            parent = None
         else:
-            parent=self.parentWindow
+            parent = self.parentWindow
         CardLayout(self.mw, self.note, ord=ord, parent=parent,
-               addMode=self.addMode)
+                   addMode=self.addMode)
         self.loadNote()
         if isWin:
             self.parentWindow.activateWindow()
@@ -459,8 +466,9 @@ class Editor(object):
                 self.disableButtons()
                 # run any filters
                 if runFilter(
-                    "editFocusLost", False, self.note, self.currentField):
+                        "editFocusLost", False, self.note, self.currentField):
                     # something updated the note; schedule reload
+
                     def onUpdate():
                         self.stealFocus = True
                         self.loadNote()
@@ -605,7 +613,7 @@ class Editor(object):
         form = aqt.forms.edithtml.Ui_Dialog()
         form.setupUi(d)
         d.connect(form.buttonBox, SIGNAL("helpRequested()"),
-                 lambda: openHelp("editor"))
+                  lambda: openHelp("editor"))
         form.textEdit.setPlainText(self.note.fields[self.currentField])
         form.textEdit.moveCursor(QTextCursor.End)
         d.exec_()
@@ -689,10 +697,12 @@ class Editor(object):
 
     def onCloze(self):
         # check that the model is set up for cloze deletion
-        if not re.search('{{(.*:)*cloze:',self.note.model()['tmpls'][0]['qfmt']):
+        if not re.search(
+                '{{(.*:)*cloze:', self.note.model()['tmpls'][0]['qfmt']):
             if self.addMode:
-                tooltip(_("Warning, cloze deletions will not work until "
-                "you switch the type at the top to Cloze."))
+                tooltip(_(u"""\
+Warning, cloze deletions will not work until you switch the type at the top \
+to Cloze."""))
             else:
                 showInfo(_("""\
 To make a cloze deletion on an existing note, you need to change it \
@@ -754,12 +764,14 @@ to a cloze type first, via Edit>Change Note Type."""))
 
     def onAddMedia(self):
         key = (_("Media") +
-               " (*.jpg *.png *.gif *.tiff *.svg *.tif *.jpeg "+
+               " (*.jpg *.png *.gif *.tiff *.svg *.tif *.jpeg " +
                "*.mp3 *.ogg *.wav *.avi *.ogv *.mpg *.mpeg *.mov *.mp4 " +
                "*.mkv *.ogx *.ogv *.oga *.flv *.swf *.flac)")
+
         def accept(file):
             self.addMedia(file, canDelete=True)
-        file = getFile(self.widget, _("Add Media"), accept, key, key="media")
+        # file = getFile(self.widget, _("Add Media"), accept, key, key="media")
+        getFile(self.widget, _("Add Media"), accept, key, key="media")
         self.parentWindow.activateWindow()
 
     def addMedia(self, path, canDelete=False):
@@ -784,9 +796,9 @@ to a cloze type first, via Edit>Change Note Type."""))
         try:
             file = getAudio(self.widget)
         except Exception, e:
-            showWarning(_(
-                "Couldn't record audio. Have you installed lame and sox?") +
-                        "\n\n" + repr(str(e)))
+            showWarning(
+                _("Couldn't record audio. Have you installed lame and sox?")
+                + "\n\n" + repr(str(e)))
             return
         self.addMedia(file)
 
@@ -818,16 +830,15 @@ to a cloze type first, via Edit>Change Note Type."""))
 
     def isURL(self, s):
         s = s.lower()
-        return (s.startswith("http://")
-            or s.startswith("https://")
-            or s.startswith("ftp://")
-            or s.startswith("file://"))
+        return (s.startswith("http://") or s.startswith("https://")
+                or s.startswith("ftp://") or s.startswith("file://"))
 
     def _retrieveURL(self, url):
         "Download file into media folder and return local filename or None."
-        # urllib doesn't understand percent-escaped utf8, but requires things like
-        # '#' to be escaped. we don't try to unquote the incoming URL, because
-        # we should only be receiving file:// urls from url mime, which is unquoted
+        # urllib doesn't understand percent-escaped utf8, but requires
+        # things like '#' to be escaped. we don't try to unquote the
+        # incoming URL, because we should only be receiving file://
+        # urls from url mime, which is unquoted
         if url.lower().startswith("file://"):
             url = url.replace("%", "%25")
             url = url.replace("#", "%23")
@@ -861,7 +872,8 @@ to a cloze type first, via Edit>Change Note Type."""))
                 new = []
                 for attr in attrs:
                     sattr = attr.strip()
-                    if sattr and sattr not in ("font-style: normal", "font-weight: normal"):
+                    if sattr and sattr not in (
+                            "font-style: normal", "font-weight: normal"):
                         new.append(sattr)
                 doc.span['style'] = ";".join(new)
             # filter out implicit formatting from webkit
@@ -984,6 +996,7 @@ to a cloze type first, via Edit>Change Note Type."""))
 # Pasting, drag & drop, and keyboard layouts
 ######################################################################
 
+
 class EditorWebView(AnkiWebView):
 
     def __init__(self, parent, editor):
@@ -1012,7 +1025,8 @@ class EditorWebView(AnkiWebView):
         self._flagAnkiText()
 
     def onPaste(self):
-        mime = self.mungeClip()
+        # mime = self.mungeClip()
+        self.mungeClip()
         self.triggerPageAction(QWebPage.Paste)
         self.restoreClip()
 
@@ -1020,7 +1034,8 @@ class EditorWebView(AnkiWebView):
         if not isMac and not isWin and evt.button() == Qt.MidButton:
             # middle click on x11; munge the clipboard before standard
             # handling
-            mime = self.mungeClip(mode=QClipboard.Selection)
+            # mime = self.mungeClip(mode=QClipboard.Selection)
+            self.mungeClip(mode=QClipboard.Selection)
             AnkiWebView.mouseReleaseEvent(self, evt)
             self.restoreClip(mode=QClipboard.Selection)
         else:
@@ -1029,7 +1044,8 @@ class EditorWebView(AnkiWebView):
     def focusInEvent(self, evt):
         window = False
         if evt.reason() in (Qt.ActiveWindowFocusReason, Qt.PopupFocusReason):
-            # editor area got focus again; need to tell js not to adjust cursor
+            # Editor area got focus again; need to tell js not to
+            # adjust cursor.
             self.eval("mouseDown++;")
             window = True
         AnkiWebView.focusInEvent(self, evt)
@@ -1077,7 +1093,8 @@ class EditorWebView(AnkiWebView):
         clip.setMimeData(self.savedClip, mode=mode)
 
     def saveClip(self, mode):
-        # we don't own the clipboard object, so we need to copy it or we'll crash
+        # We don't own the clipboard object, so we need to copy it or
+        # we'll crash.
         mime = self.editor.mw.app.clipboard().mimeData(mode=mode)
         n = QMimeData()
         if mime.hasText():
@@ -1151,19 +1168,21 @@ class EditorWebView(AnkiWebView):
         html = mime.html()
         newMime = QMimeData()
         if self.strip and not html.startswith("<!--anki-->"):
-            # special case for google images: if after stripping there's no text
-            # and there are image links, we'll paste those as html instead
+            # Special case for google images: if after stripping
+            # there's no text and there are image links, we'll paste
+            # those as html instead
             if not stripHTML(html).strip():
                 newHtml = ""
                 mid = self.editor.note.mid
                 for url in self.editor.mw.col.media.filesInStr(
-                    mid, html, includeRemote=True):
+                        mid, html, includeRemote=True):
                     newHtml += self.editor.urlToLink(url)
                 if not newHtml and mime.hasImage():
                     return self._processImage(mime)
                 newMime.setHtml(newHtml)
             else:
-                # use .text() if available so newlines are preserved; otherwise strip
+                # Use .text() if available so newlines are preserved;
+                # otherwise strip
                 if mime.hasText():
                     return self._processText(mime)
                 else:
@@ -1199,7 +1218,7 @@ class EditorWebView(AnkiWebView):
         mime = clip.mimeData()
         if not mime.hasHtml():
             return
-        html = mime.html()
+        # html = mime.html()
         mime.setHtml("<!--anki-->" + mime.html())
 
     def contextMenuEvent(self, evt):

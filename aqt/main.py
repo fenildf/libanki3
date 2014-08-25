@@ -2,23 +2,52 @@
 # -*- coding: utf-8 -*-
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
+import os
+import pprint
 import re
 import signal
+import sys
+import traceback
 import zipfile
-
 from send2trash import send2trash
-from aqt.qt import *
+from PyQt4.QtCore import Qt, QThread, SIGNAL, SLOT
+from PyQt4.QtGui import QAction, QDialog, QDialogButtonBox, QFontInfo, \
+    QKeySequence, QMainWindow, QPushButton, QShortcut, QStyleFactory, \
+    QTextEdit, QVBoxLayout
+from PyQt4.QtWebKit import QWebSettings
 from anki import Collection
-from anki.utils import  isWin, isMac, intTime, splitFields, ids2str
+from anki.utils import ids2str, intTime, isMac, isWin, splitFields
 from anki.hooks import runHook, addHook
+from anki.lang import _, ngettext
+from aqt.deckbrowser import DeckBrowser
+from aqt.overview import Overview
+from aqt.qt import qtmajor
+from aqt.reviewer import Reviewer
+from aqt.studydeck import StudyDeck
+from aqt.sync import SyncManager
+from aqt.upgrade import Upgrader
+from aqt.utils import applyStyles, askUser, checkInvalidFilename, \
+    getOnlyText, openHelp, openLink, restoreGeom, restoreState, saveGeom, \
+    showInfo, showText, showWarning, tooltip
 import aqt
+import aqt.about
+import aqt.addons
+import aqt.deckconf
+import aqt.dyndeckconf
+import aqt.errors
+import aqt.exporting
+import aqt.importing
+import aqt.models
+import aqt.preferences
 import aqt.progress
-import aqt.webview
-import aqt.toolbar
 import aqt.stats
-from aqt.utils import saveGeom, restoreGeom, showInfo, showWarning, \
-    restoreState, getOnlyText, askUser, applyStyles, showText, tooltip, \
-    openHelp, openLink, checkInvalidFilename
+import aqt.toolbar
+import aqt.update
+import aqt.webview
+
+# Todo: check
+if isMac:
+    from PyQt4.QtGui import qt_mac_set_menubar_icons
 import anki.db
 
 
@@ -37,17 +66,20 @@ class AnkiQt(QMainWindow):
             # load the new deck user profile
             self.pm.load(self.pm.profiles()[0])
             # upgrade if necessary
-            from aqt.upgrade import Upgrader
             u = Upgrader(self)
             u.maybeUpgrade()
             self.pm.meta['firstRun'] = False
             self.pm.save()
         # init rest of app
-        if qtmajor == 4 and qtminor < 8:
-            # can't get modifiers immediately on qt4.7, so no safe mode there
+        # This calls for EAFP, not LBYL.
+        try:
+            # Set to safe mode when (we know that) the shift key is down.
+            self.safeMode = self.app.queryKeyboardModifiers() \
+                & Qt.ShiftModifier
+        except AttributeError:
+            # No idea? No safe mode. (We don’t really care about
+            # versions, but we should get here on Qt < 4.8)
             self.safeMode = False
-        else:
-            self.safeMode = self.app.queryKeyboardModifiers() & Qt.ShiftModifier
         try:
             self.setupUI()
             self.setupAddons()
@@ -60,7 +92,8 @@ class AnkiQt(QMainWindow):
                     "syncing and add-on loading."))
         # were we given a file to import?
         if args and args[0]:
-            self.onAppMsg(unicode(args[0], sys.getfilesystemencoding(), "ignore"))
+            self.onAppMsg(
+                unicode(args[0], sys.getfilesystemencoding(), "ignore"))
         # Load profile in a timer so we can let the window finish init and not
         # close on profile load error.
         if isMac and qtmajor >= 5:
@@ -237,7 +270,8 @@ Are you sure?""")):
         if self.pendingImport:
             if self.pm.profile['key']:
                 showInfo(_("""\
-To import into a password protected profile, please open the profile before attempting to import."""))
+To import into a password protected profile, please open the profile before \
+attempting to import."""))
             else:
                 self.handleImport(self.pendingImport)
 
@@ -278,7 +312,7 @@ see the manual for how to restore from an automatic backup.
 Debug info:
 """)+traceback.format_exc())
             self.unloadProfile()
-        except Exception, e:
+        except Exception as e:
             # the custom exception handler won't catch this if we immediately
             # unload, so we have to manually handle it
             if "invalidTempFolder" in repr(str(e)):
@@ -326,7 +360,6 @@ the manual for information on how to restore from an automatic backup."))
             self.progress.finish()
         return True
 
-
     # Backup and auto-optimize
     ##########################################################################
 
@@ -369,7 +402,7 @@ the manual for information on how to restore from an automatic backup."))
 
     def maybeOptimize(self):
         # have two weeks passed?
-        if (intTime() - self.pm.profile['lastOptimize']) < 86400*14:
+        if (intTime() - self.pm.profile['lastOptimize']) < 86400 * 14:
             return
         self.progress.start(label=_("Optimizing..."), immediate=True)
         self.col.optimize()
@@ -381,14 +414,13 @@ the manual for information on how to restore from an automatic backup."))
     ##########################################################################
 
     def moveToState(self, state, *args):
-        #print "-> move from", self.state, "to", state
         oldState = self.state or "dummy"
-        cleanup = getattr(self, "_"+oldState+"Cleanup", None)
+        cleanup = getattr(self, "_" + oldState + "Cleanup", None)
         if cleanup:
             cleanup(state)
         self.state = state
         runHook('beforeStateChange', state, oldState, *args)
-        getattr(self, "_"+state+"State")(oldState, *args)
+        getattr(self, "_" + state + "State")(oldState, *args)
         runHook('afterStateChange', state, oldState, *args)
 
     def _deckBrowserState(self, oldState):
@@ -493,7 +525,7 @@ h1 { margin-bottom: 0.2em; }
 """
 
     def button(self, link, name, key=None, class_="", id=""):
-        class_ = "but "+ class_
+        class_ = "but " + class_
         if key:
             key = _("Shortcut key: %s") % key
         else:
@@ -514,7 +546,7 @@ title="%s">%s</button>''' % (
         tweb = aqt.webview.AnkiWebView()
         tweb.setObjectName("toolbarWeb")
         tweb.setFocusPolicy(Qt.WheelFocus)
-        tweb.setFixedHeight(32+self.fontHeightDelta)
+        tweb.setFixedHeight(32 + self.fontHeightDelta)
         self.toolbar = aqt.toolbar.Toolbar(self, tweb)
         self.toolbar.draw()
         # main area
@@ -524,13 +556,13 @@ title="%s">%s</button>''' % (
         self.web.setMinimumWidth(400)
         # bottom area
         sweb = self.bottomWeb = aqt.webview.AnkiWebView()
-        #sweb.hide()
+        # sweb.hide()
         sweb.setFixedHeight(100)
         sweb.setObjectName("bottomWeb")
         sweb.setFocusPolicy(Qt.WheelFocus)
         # add in a layout
         self.mainLayout = QVBoxLayout()
-        self.mainLayout.setContentsMargins(0,0,0,0)
+        self.mainLayout.setContentsMargins(0, 0, 0, 0)
         self.mainLayout.setSpacing(0)
         self.mainLayout.addWidget(tweb)
         self.mainLayout.addWidget(self.web)
@@ -549,6 +581,7 @@ title="%s">%s</button>''' % (
     def onSigInt(self, signum, frame):
         # interrupt any current transaction and schedule a rollback & quit
         self.col.db.interrupt()
+
         def quit():
             self.col.db.rollback()
             self.close()
@@ -558,11 +591,9 @@ title="%s">%s</button>''' % (
         self.progress = aqt.progress.ProgressManager(self)
 
     def setupErrorHandler(self):
-        import aqt.errors
         self.errorHandler = aqt.errors.ErrorHandler(self)
 
     def setupAddons(self):
-        import aqt.addons
         self.addonManager = aqt.addons.AddonManager(self)
 
     def setupThreads(self):
@@ -572,15 +603,12 @@ title="%s">%s</button>''' % (
         return self._mainThread == QThread.currentThread()
 
     def setupDeckBrowser(self):
-        from aqt.deckbrowser import DeckBrowser
         self.deckBrowser = DeckBrowser(self)
 
     def setupOverview(self):
-        from aqt.overview import Overview
         self.overview = Overview(self)
 
     def setupReviewer(self):
-        from aqt.reviewer import Reviewer
         self.reviewer = Reviewer(self)
 
     # Syncing
@@ -590,7 +618,6 @@ title="%s">%s</button>''' % (
         if not auto or (self.pm.profile['syncKey'] and
                         self.pm.profile['autoSync'] and
                         not self.safeMode):
-            from aqt.sync import SyncManager
             if not self.unloadCollection():
                 return
             # set a sync state so the refresh timer doesn't fire while deck
@@ -688,7 +715,7 @@ title="%s">%s</button>''' % (
     def maybeEnableUndo(self):
         if self.col and self.col.undoName():
             self.form.actionUndo.setText(_("Undo %s") %
-                                            self.col.undoName())
+                                         self.col.undoName())
             self.form.actionUndo.setEnabled(True)
             runHook("undoState", True)
         else:
@@ -720,10 +747,8 @@ title="%s">%s</button>''' % (
         if not deck:
             deck = self.col.decks.current()
         if deck['dyn']:
-            import aqt.dyndeckconf
             aqt.dyndeckconf.DeckConf(self, deck=deck)
         else:
-            import aqt.deckconf
             aqt.deckconf.DeckConf(self, deck)
 
     def onOverview(self):
@@ -737,15 +762,13 @@ title="%s">%s</button>''' % (
         aqt.stats.DeckStats(self)
 
     def onPrefs(self):
-        import aqt.preferences
         aqt.preferences.Preferences(self)
 
     def onNoteTypes(self):
-        import aqt.models
+
         aqt.models.Models(self, self, fromMain=True)
 
     def onAbout(self):
-        import aqt.about
         aqt.about.show(self)
 
     def onDonate(self):
@@ -765,18 +788,15 @@ title="%s">%s</button>''' % (
         aqt.importing.importFile(self, path)
 
     def onImport(self):
-        import aqt.importing
         aqt.importing.onImport(self)
 
     def onExport(self, did=None):
-        import aqt.exporting
         aqt.exporting.ExportDialog(self, did=did)
 
     # Cramming
     ##########################################################################
 
     def onCram(self, search=""):
-        import aqt.dyndeckconf
         n = 1
         deck = self.col.decks.current()
         if not search:
@@ -801,7 +821,7 @@ title="%s">%s</button>''' % (
     def setupMenus(self):
         m = self.form
         s = SIGNAL("triggered()")
-        #self.connect(m.actionDownloadSharedPlugin, s, self.onGetSharedPlugin)
+        # self.connect(m.actionDownloadSharedPlugin, s, self.onGetSharedPlugin)
         self.connect(m.actionSwitchProfile, s, self.unloadProfile)
         self.connect(m.actionImport, s, self.onImport)
         self.connect(m.actionExport, s, self.onExport)
@@ -825,7 +845,6 @@ title="%s">%s</button>''' % (
     ##########################################################################
 
     def setupAutoUpdate(self):
-        import aqt.update
         self.autoUpdate = aqt.update.LatestVersionFinder(self)
         self.connect(self.autoUpdate, SIGNAL("newVerAvail"), self.newVerAvail)
         self.connect(self.autoUpdate, SIGNAL("newMsg"), self.newMsg)
@@ -864,7 +883,7 @@ Difference to correct time: %s.""") % diffText
 
     def setupRefreshTimer(self):
         # every 10 minutes
-        self.progress.timer(10*60*1000, self.onRefreshTimer, True)
+        self.progress.timer(10 * 60 * 1000, self.onRefreshTimer, True)
 
     def onRefreshTimer(self):
         if self.state == "deckBrowser":
@@ -896,9 +915,10 @@ and if the problem comes up again, please ask on the support site."""))
                 f.write("nid\tmid\tfields\n")
             for id, mid, flds in col.db.execute(
                     "select id, mid, flds from notes where id in %s" %
-                ids2str(nids)):
+                    ids2str(nids)):
                 fields = splitFields(flds)
-                f.write(("\t".join([str(id), str(mid)] + fields)).encode("utf8"))
+                f.write(
+                    ("\t".join([str(id), str(mid)] + fields)).encode("utf8"))
                 f.write("\n")
 
     # Schema modifications
@@ -970,8 +990,8 @@ will be lost. Continue?"""))
         b = QPushButton(_("Delete Unused"))
         b.setAutoDefault(False)
         box.addButton(b, QDialogButtonBox.ActionRole)
-        b.connect(
-            b, SIGNAL("clicked()"), lambda u=unused, d=diag: self.deleteUnused(u, d))
+        b.connect(b, SIGNAL("clicked()"),
+                  lambda u=unused, d=diag: self.deleteUnused(u, d))
         diag.connect(box, SIGNAL("rejected()"), diag, SLOT("reject()"))
         diag.setMinimumHeight(400)
         diag.setMinimumWidth(500)
@@ -980,8 +1000,7 @@ will be lost. Continue?"""))
         saveGeom(diag, "checkmediadb")
 
     def deleteUnused(self, unused, diag):
-        if not askUser(
-            _("Delete unused media?")):
+        if not askUser(_("Delete unused media?")):
             return
         mdir = self.col.media.dir()
         for f in unused:
@@ -992,7 +1011,6 @@ will be lost. Continue?"""))
         diag.close()
 
     def onStudyDeck(self):
-        from aqt.studydeck import StudyDeck
         ret = StudyDeck(
             self, dyn=True, current=self.col.decks.current()['name'])
         if ret.name:
@@ -1011,15 +1029,17 @@ will be lost. Continue?"""))
         part1 = ngettext("%d card", "%d cards", len(cids)) % len(cids)
         part1 = _("%s to delete:") % part1
         diag, box = showText(part1 + "\n\n" + report, run=False,
-                geomKey="emptyCards")
+                             geomKey="emptyCards")
         box.addButton(_("Delete Cards"), QDialogButtonBox.AcceptRole)
         box.button(QDialogButtonBox.Close).setDefault(True)
+
         def onDelete():
             saveGeom(diag, "emptyCards")
             QDialog.accept(diag)
             self.checkpoint(_("Delete Empty"))
             self.col.remCards(cids)
-            tooltip(ngettext("%d card deleted.", "%d cards deleted.", len(cids)) % len(cids))
+            tooltip(ngettext("%d card deleted.", "%d cards deleted.",
+                             len(cids)) % len(cids))
             self.reset()
         diag.connect(box, SIGNAL("accepted()"), onDelete)
         diag.show()
@@ -1042,6 +1062,7 @@ will be lost. Continue?"""))
 
     def _captureOutput(self, on):
         mw = self
+
         class Stream(object):
             def write(self, data):
                 mw._output += data
@@ -1067,7 +1088,8 @@ will be lost. Continue?"""))
         self.onDebugRet(frm)
 
     def onDebugRet(self, frm):
-        import pprint, traceback
+        # These are reported as unused. That is OK. They are for use
+        # by the user.
         text = frm.text.toPlainText()
         card = self._debugCard
         bcard = self._debugBrowserCard
@@ -1151,13 +1173,15 @@ will be lost. Continue?"""))
             if buf == "raise":
                 return
             self.pendingImport = buf
-            return tooltip(_("Deck will be imported when a profile is opened."))
+            return tooltip(
+                _("Deck will be imported when a profile is opened."))
         if not self.interactiveState() or self.progress.busy():
-            # we can't raise the main window while in profile dialog, syncing, etc
+            # we can't raise the main window while in profile dialog,
+            # syncing, etc
             if buf != "raise":
                 showInfo(_("""\
 Please ensure a profile is open and Anki is not busy, then try again."""),
-                     parent=None)
+                         parent=None)
             return
         # raise window
         if isWin:
@@ -1166,7 +1190,8 @@ Please ensure a profile is open and Anki is not busy, then try again."""),
             self.setWindowState(Qt.WindowActive)
             self.showNormal()
         else:
-            # on osx we can raise the window. on unity the icon in the tray will just flash.
+            # on osx we can raise the window. on unity the icon in the
+            # tray will just flash.
             self.activateWindow()
             self.raise_()
         if buf == "raise":

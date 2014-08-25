@@ -27,10 +27,11 @@ class TextImporter(NoteImporter):
         # process all lines
         log = []
         notes = []
-        lineNum = 0
+        # lineNum = 0
         ignored = 0
         if self.delimiter:
-            reader = csv.reader(self.data, delimiter=self.delimiter, doublequote=True)
+            reader = csv.reader(
+                self.data, delimiter=self.delimiter, doublequote=True)
         else:
             reader = csv.reader(self.data, self.dialect, doublequote=True)
         try:
@@ -40,16 +41,14 @@ class TextImporter(NoteImporter):
                     if row:
                         log.append(_(
                             "'%(row)s' had %(num1)d fields, "
-                            "expected %(num2)d") % {
-                            "row": u" ".join(row),
-                            "num1": len(row),
-                            "num2": self.numFields,
-                            })
+                            "expected %(num2)d") % {"row": u" ".join(row),
+                                                    "num1": len(row),
+                                                    "num2": self.numFields})
                         ignored += 1
                     continue
                 note = self.noteFromFields(row)
                 notes.append(note)
-        except (csv.Error), e:
+        except (csv.Error) as e:
             log.append(_("Aborted: %s") % str(e))
         self.log = log
         self.ignored = ignored
@@ -72,9 +71,11 @@ class TextImporter(NoteImporter):
         self.data = self.fileobj.read()
         if self.data.startswith(codecs.BOM_UTF8):
             self.data = self.data[len(codecs.BOM_UTF8):]
+
         def sub(s):
             return re.sub("^\#.*$", "__comment", s)
-        self.data = [sub(x)+"\n" for x in self.data.split("\n") if sub(x) != "__comment"]
+        self.data = [sub(x)+"\n" for x in self.data.split("\n")
+                     if sub(x) != "__comment"]
         if self.data:
             if self.data[0].startswith("tags:"):
                 tags = unicode(self.data[0][5:], "utf8").strip()
@@ -114,7 +115,8 @@ class TextImporter(NoteImporter):
                     self.delimiter = ","
                 else:
                     self.delimiter = " "
-            reader = csv.reader(self.data, delimiter=self.delimiter, doublequote=True)
+            reader = csv.reader(
+                self.data, delimiter=self.delimiter, doublequote=True)
         try:
             while True:
                 row = reader.next()

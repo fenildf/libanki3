@@ -2,10 +2,14 @@
 # Copyright: Damien Elmes <anki@ichi2.net>
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
-from aqt.qt import *
+from PyQt4.QtCore import SIGNAL
+from PyQt4.QtGui import QHBoxLayout, QKeySequence, QLabel, QPushButton, \
+    QShortcut, QSizePolicy
+
 from anki.hooks import addHook, remHook, runHook
-from aqt.utils import  shortcut
-import aqt
+from anki.lang import _
+from aqt.utils import shortcut
+
 
 class ModelChooser(QHBoxLayout):
 
@@ -27,7 +31,7 @@ class ModelChooser(QHBoxLayout):
             self.addWidget(self.modelLabel)
         # models box
         self.models = QPushButton()
-        #self.models.setStyleSheet("* { text-align: left; }")
+        # self.models.setStyleSheet("* { text-align: left; }")
         self.models.setToolTip(shortcut(_("Change Note Type (Ctrl+N)")))
         s = QShortcut(QKeySequence(_("Ctrl+N")), self.widget)
         s.connect(s, SIGNAL("activated()"), self.onModelChange)
@@ -63,6 +67,7 @@ class ModelChooser(QHBoxLayout):
         # edit button
         edit = QPushButton(_("Manage"))
         self.connect(edit, SIGNAL("clicked()"), self.onEdit)
+
         def nameFunc():
             return sorted(self.deck.models.allNames())
         ret = StudyDeck(

@@ -2,16 +2,17 @@
 # Copyright: Damien Elmes <anki@ichi2.net>
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
-import urllib
-import sys
-import gzip
-import random
 from cStringIO import StringIO
-
+import gzip
 import httplib2
+import os
+import random
+import sys
+import urllib
+
+from anki.consts import REM_CARD, REM_NOTE, SYNC_BASE, SYNC_VER, SYNC_ZIP_COUNT
 from anki.db import DB
 from anki.utils import ids2str, intTime, json, isWin, isMac, platDesc, checksum
-from anki.consts import *
 from hooks import runHook
 import anki
 from lang import ngettext
@@ -35,6 +36,7 @@ except AttributeError:
 # Httplib2 connection object
 ######################################################################
 
+
 def httpCon():
     certs = os.path.join(os.path.dirname(__file__), "ankiweb.certs")
     if not os.path.exists(certs):
@@ -55,6 +57,7 @@ def httpCon():
 
 # Proxy handling
 ######################################################################
+
 
 def _setupProxy():
     global HTTP_PROXY
@@ -81,6 +84,7 @@ def _setupProxy():
         p.proxy_rdns = True
     HTTP_PROXY = p
 
+
 def _proxyMethod(url):
     if url.lower().startswith("https"):
         return "https"
@@ -91,6 +95,7 @@ _setupProxy()
 
 # Incremental syncing
 ##########################################################################
+
 
 class Syncer(object):
 
@@ -236,8 +241,7 @@ class Syncer(object):
         if not self.col.basicCheck():
             return "failed basic check"
         for t in "cards", "notes", "revlog", "graves":
-            if self.col.db.scalar(
-                "select count() from %s where usn = -1" % t):
+            if self.col.db.scalar("select count() from %s where usn = -1" % t):
                 return "%s had usn = -1" % t
         for g in self.col.decks.all():
             if g['usn'] == -1:
@@ -335,7 +339,7 @@ from notes where %s""" % d)
                 # if we're the client, mark the objects as having been sent
                 if not self.col.server:
                     self.col.db.execute(
-                        "update %s set usn=? where usn=-1"%curTable,
+                        "update %s set usn=? where usn=-1" % curTable,
                         self.maxUsn)
             buf[curTable] = rows
             lim -= fetched
@@ -373,7 +377,7 @@ from notes where %s""" % d)
                 decks.append(oid)
         if not self.col.server:
             self.col.db.execute("update graves set usn=? where usn=-1",
-                                 self.maxUsn)
+                                self.maxUsn)
         return dict(cards=cards, notes=notes, decks=decks)
 
     def start(self, minUsn, lnewer, graves):
@@ -402,7 +406,8 @@ from notes where %s""" % d)
 
     def getModels(self):
         if self.col.server:
-            return [m for m in self.col.models.all() if m['usn'] >= self.minUsn]
+            return [m for m in self.col.models.all()
+                    if m['usn'] >= self.minUsn]
         else:
             mods = [m for m in self.col.models.all() if m['usn'] == -1]
             for m in mods:
@@ -424,8 +429,8 @@ from notes where %s""" % d)
         if self.col.server:
             return [
                 [g for g in self.col.decks.all() if g['usn'] >= self.minUsn],
-                [g for g in self.col.decks.allConf() if g['usn'] >= self.minUsn]
-            ]
+                [g for g in self.col.decks.allConf()
+                 if g['usn'] >= self.minUsn]]
         else:
             decks = [g for g in self.col.decks.all() if g['usn'] == -1]
             for g in decks:
@@ -517,12 +522,14 @@ from notes where %s""" % d)
 # Local syncing for unit tests
 ##########################################################################
 
+
 class LocalServer(Syncer):
 
     # serialize/deserialize payload, so we don't end up sharing objects
     # between cols
     def applyChanges(self, changes):
-        l = json.loads; d = json.dumps
+        l = json.loads
+        d = json.dumps
         return l(d(Syncer.applyChanges(self, l(d(changes)))))
 
 # HTTP syncing tools
@@ -532,6 +539,7 @@ class LocalServer(Syncer):
 # - 501: client needs upgrade
 # - 502: ankiweb down
 # - 503/504: server too busy
+
 
 class HttpSyncer(object):
 
@@ -547,12 +555,13 @@ class HttpSyncer(object):
 
     # Posting data as a file
     ######################################################################
-    # We don't want to post the payload as a form var, as the percent-encoding is
-    # costly. We could send it as a raw post, but more HTTP clients seem to
-    # support file uploading, so this is the more compatible choice.
+    # We don't want to post the payload as a form var, as the
+    # percent-encoding is costly. We could send it as a raw post, but
+    # more HTTP clients seem to support file uploading, so this is the
+    # more compatible choice.
 
     def req(self, method, fobj=None, comp=6, badAuthRaises=False):
-        BOUNDARY="Anki-sync-boundary"
+        BOUNDARY = "Anki-sync-boundary"
         bdry = "--"+BOUNDARY
         buf = StringIO()
         # post vars
@@ -602,6 +611,7 @@ Content-Type: application/octet-stream\r\n\r\n""")
 # Incremental sync over HTTP
 ######################################################################
 
+
 class RemoteServer(HttpSyncer):
 
     def __init__(self, hkey):
@@ -630,8 +640,10 @@ class RemoteServer(HttpSyncer):
             s=self.skey,
         )
         ret = self.req(
-            "meta", StringIO(json.dumps(dict(
-                v=SYNC_VER, cv="ankidesktop,%s,%s"%(anki.version, platDesc())))),
+            "meta",
+            StringIO(json.dumps(dict(
+                v=SYNC_VER, cv="ankidesktop,%s,%s" % (
+                    anki.version, platDesc())))),
             badAuthRaises=False)
         if not ret:
             # invalid auth
@@ -663,13 +675,14 @@ class RemoteServer(HttpSyncer):
 # Full syncing
 ##########################################################################
 
+
 class FullSyncer(HttpSyncer):
 
     def __init__(self, col, hkey, con):
         HttpSyncer.__init__(self, hkey, con)
         self.postVars = dict(
             k=self.hkey,
-            v="ankidesktop,%s,%s"%(anki.version, platDesc()),
+            v="ankidesktop,%s,%s" % (anki.version, platDesc()),
         )
         self.col = col
 
@@ -720,6 +733,7 @@ class FullSyncer(HttpSyncer):
 #   assumption other syncers are in sync with the server
 #
 
+
 class MediaSyncer(object):
 
     def __init__(self, col, server=None):
@@ -740,12 +754,12 @@ class MediaSyncer(object):
             return "noChanges"
 
         # loop through and process changes from server
-        self.col.log("last local usn is %s"%lastUsn)
+        self.col.log("last local usn is %s" % lastUsn)
         self.downloadCount = 0
         while True:
             data = self.server.mediaChanges(lastUsn=lastUsn)
 
-            self.col.log("mediaChanges resp count %d"%len(data))
+            self.col.log("mediaChanges resp count %d" % len(data))
             if not data:
                 break
 
@@ -754,7 +768,7 @@ class MediaSyncer(object):
             for fname, rusn, rsum in data:
                 lsum, ldirty = self.col.media.syncInfo(fname)
                 self.col.log(
-                    "check: lsum=%s rsum=%s ldirty=%d rusn=%d fname=%s"%(
+                    "check: lsum=%s rsum=%s ldirty=%d rusn=%d fname=%s" % (
                         (lsum and lsum[0:4]),
                         (rsum and rsum[0:4]),
                         ldirty,
@@ -784,8 +798,8 @@ class MediaSyncer(object):
 
             self._downloadFiles(need)
 
-            self.col.log("update last usn to %d"%lastUsn)
-            self.col.media.setLastUsn(lastUsn) # commits
+            self.col.log("update last usn to %d" % lastUsn)
+            self.col.media.setLastUsn(lastUsn)  # commits
 
         # at this point we're all up to date with the server's changes,
         # and we need to send our own
@@ -833,14 +847,14 @@ class MediaSyncer(object):
             return ret
 
     def _downloadFiles(self, fnames):
-        self.col.log("%d files to fetch"%len(fnames))
+        self.col.log("%d files to fetch" % len(fnames))
         while fnames:
             top = fnames[0:SYNC_ZIP_COUNT]
-            self.col.log("fetch %s"%top)
+            self.col.log("fetch %s" % top)
             zipData = self.server.downloadFiles(files=top)
             cnt = self.col.media.addFilesFromZip(zipData)
             self.downloadCount += cnt
-            self.col.log("received %d files"%cnt)
+            self.col.log("received %d files" % cnt)
             fnames = fnames[cnt:]
 
             n = self.downloadCount
@@ -850,6 +864,7 @@ class MediaSyncer(object):
 
 # Remote media syncing
 ##########################################################################
+
 
 class RemoteMediaServer(HttpSyncer):
 
@@ -865,7 +880,7 @@ class RemoteMediaServer(HttpSyncer):
     def begin(self):
         self.postVars = dict(
             k=self.hkey,
-            v="ankidesktop,%s,%s"%(anki.version, platDesc())
+            v="ankidesktop,%s,%s" % (anki.version, platDesc())
         )
         ret = self._dataOnly(json.loads(self.req(
             "begin", StringIO(json.dumps(dict())))))
@@ -897,8 +912,8 @@ class RemoteMediaServer(HttpSyncer):
 
     def _dataOnly(self, resp):
         if resp['err']:
-            self.col.log("error returned:%s"%resp['err'])
-            raise Exception("SyncError:%s"%resp['err'])
+            self.col.log("error returned:%s" % resp['err'])
+            raise Exception("SyncError:%s" % resp['err'])
         return resp['data']
 
     # only for unit tests

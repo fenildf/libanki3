@@ -4,10 +4,14 @@
 from operator import itemgetter
 
 from anki.consts import NEW_CARDS_RANDOM
-from aqt.qt import *
+from PyQt4.QtCore import Qt, SIGNAL
+from PyQt4.QtGui import QCursor, QDialog, QDialogButtonBox, QMenu
+
 import aqt
-from aqt.utils import showInfo, showWarning, openHelp, getOnlyText, askUser, \
+from anki.lang import _, ngettext
+from aqt.utils import askUser, getOnlyText, openHelp, showInfo, showWarning, \
     tooltip, saveGeom, restoreGeom
+
 
 class DeckConf(QDialog):
     def __init__(self, mw, deck):
@@ -28,9 +32,9 @@ class DeckConf(QDialog):
                      lambda: openHelp("deckoptions"))
         self.connect(self.form.confOpts, SIGNAL("clicked()"), self.confOpts)
         self.form.confOpts.setText(u"▾")
-        self.connect(self.form.buttonBox.button(QDialogButtonBox.RestoreDefaults),
-                     SIGNAL("clicked()"),
-                     self.onRestore)
+        self.connect(
+            self.form.buttonBox.button(QDialogButtonBox.RestoreDefaults),
+            SIGNAL("clicked()"), self.onRestore)
         self.setWindowTitle(_("Options for %s") % self.deck['name'])
         # qt doesn't size properly with altered fonts otherwise
         restoreGeom(self, "deckconf", adjustSize=True)
@@ -68,7 +72,7 @@ class DeckConf(QDialog):
         self.ignoreConfChange = False
         self.form.dconf.setCurrentIndex(startOn)
         if self._origNewOrder is None:
-            self._origNewOrder =  self.confList[startOn]['new']['order']
+            self._origNewOrder = self.confList[startOn]['new']['order']
         self.onConfChange(startOn)
 
     def confOpts(self):
@@ -100,8 +104,9 @@ class DeckConf(QDialog):
             if d['conf'] == conf['id']:
                 cnt += 1
         if cnt > 1:
-            txt = _("Your changes will affect multiple decks. If you wish to "
-            "change only the current deck, please add a new options group first.")
+            txt = _("""\
+Your changes will affect multiple decks. If you wish to change only the \
+current deck, please add a new options group first.""")
         else:
             txt = ""
         self.form.count.setText(txt)
@@ -137,8 +142,8 @@ class DeckConf(QDialog):
 
     def setChildren(self):
         if not askUser(
-            _("Set all decks below %s to this option group?") %
-            self.deck['name']):
+                _("Set all decks below %s to this option group?") %
+                self.deck['name']):
             return
         for did in self.childDids:
             deck = self.mw.col.decks.get(did)
@@ -146,8 +151,8 @@ class DeckConf(QDialog):
                 continue
             deck['conf'] = self.deck['conf']
             self.mw.col.decks.save(deck)
-        tooltip(ngettext("%d deck updated.", "%d decks updated.", \
-                        len(self.childDids)) % len(self.childDids))
+        tooltip(ngettext("%d deck updated.", "%d decks updated.",
+                         len(self.childDids)) % len(self.childDids))
 
     # Loading
     ##################################################
@@ -178,7 +183,7 @@ class DeckConf(QDialog):
         f.lrnGradInt.setValue(c['ints'][0])
         f.lrnEasyInt.setValue(c['ints'][1])
         f.lrnEasyInt.setValue(c['ints'][1])
-        f.lrnFactor.setValue(c['initialFactor']/10.0)
+        f.lrnFactor.setValue(c['initialFactor'] / 10.0)
         f.newOrder.setCurrentIndex(c['order'])
         f.newPerDay.setValue(c['perDay'])
         f.bury.setChecked(c.get("bury", True))
@@ -186,15 +191,15 @@ class DeckConf(QDialog):
         # rev
         c = self.conf['rev']
         f.revPerDay.setValue(c['perDay'])
-        f.easyBonus.setValue(c['ease4']*100)
-        f.fi1.setValue(c['ivlFct']*100)
+        f.easyBonus.setValue(c['ease4'] * 100)
+        f.fi1.setValue(c['ivlFct'] * 100)
         f.maxIvl.setValue(c['maxIvl'])
         f.revplim.setText(self.parentLimText('rev'))
         f.buryRev.setChecked(c.get("bury", True))
         # lapse
         c = self.conf['lapse']
         f.lapSteps.setText(self.listToUser(c['delays']))
-        f.lapMult.setValue(c['mult']*100)
+        f.lapMult.setValue(c['mult'] * 100)
         f.lapMinInt.setValue(c['minInt'])
         f.leechThreshold.setValue(c['leechFails'])
         f.leechAction.setCurrentIndex(c['leechAction'])
@@ -256,7 +261,7 @@ class DeckConf(QDialog):
         self.updateList(c, 'delays', f.lrnSteps)
         c['ints'][0] = f.lrnGradInt.value()
         c['ints'][1] = f.lrnEasyInt.value()
-        c['initialFactor'] = f.lrnFactor.value()*10
+        c['initialFactor'] = f.lrnFactor.value() * 10
         c['order'] = f.newOrder.currentIndex()
         c['perDay'] = f.newPerDay.value()
         c['bury'] = f.bury.isChecked()
@@ -269,14 +274,14 @@ class DeckConf(QDialog):
         # rev
         c = self.conf['rev']
         c['perDay'] = f.revPerDay.value()
-        c['ease4'] = f.easyBonus.value()/100.0
-        c['ivlFct'] = f.fi1.value()/100.0
+        c['ease4'] = f.easyBonus.value() / 100.0
+        c['ivlFct'] = f.fi1.value() / 100.0
         c['maxIvl'] = f.maxIvl.value()
         c['bury'] = f.buryRev.isChecked()
         # lapse
         c = self.conf['lapse']
         self.updateList(c, 'delays', f.lapSteps, minSize=0)
-        c['mult'] = f.lapMult.value()/100.0
+        c['mult'] = f.lapMult.value() / 100.0
         c['minInt'] = f.lapMinInt.value()
         c['leechFails'] = f.leechThreshold.value()
         c['leechAction'] = f.leechAction.currentIndex()

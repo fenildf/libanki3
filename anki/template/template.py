@@ -1,12 +1,20 @@
+# -*- coding: utf-8 -*-
+
 import re
-from anki.utils import stripHTML, stripHTMLMedia
+
 from anki.hooks import runFilter
-from anki.template import furigana; furigana.install()
-from anki.template import hint; hint.install()
+from anki.template import furigana
+from anki.template import hint
+from anki.utils import stripHTML, stripHTMLMedia
+
+furigana.install()
+hint.install()
 
 clozeReg = r"(?s)\{\{c%s::(.*?)(::(.*?))?\}\}"
 
 modifiers = {}
+
+
 def modifier(symbol):
     """Decorator for associating a function with a Mustache tag modifier.
 
@@ -65,10 +73,10 @@ class Template(object):
 
     def compile_regexps(self):
         """Compiles our section and tag regular expressions."""
-        tags = { 'otag': re.escape(self.otag), 'ctag': re.escape(self.ctag) }
+        tags = {'otag': re.escape(self.otag), 'ctag': re.escape(self.ctag)}
 
         section = r"%(otag)s[\#|^]([^\}]*)%(ctag)s(.+?)%(otag)s/\1%(ctag)s"
-        self.section_re = re.compile(section % tags, re.M|re.S)
+        self.section_re = re.compile(section % tags, re.M | re.S)
 
         tag = r"%(otag)s(#|=|&|!|>|\{)?(.+?)\1?%(ctag)s+"
         self.tag_re = re.compile(tag % tags)
@@ -88,7 +96,7 @@ class Template(object):
             if m:
                 # get full field text
                 txt = get_or_attr(context, m.group(2), None)
-                m = re.search(clozeReg%m.group(1), txt)
+                m = re.search(clozeReg % m.group(1), txt)
                 if m:
                     it = m.group(1)
                 else:
@@ -152,9 +160,9 @@ class Template(object):
         """Render a tag without escaping it."""
         txt = get_or_attr(context, tag_name)
         if txt is not None:
-            # some field names could have colons in them
-            # avoid interpreting these as field modifiers
-            # better would probably be to put some restrictions on field names
+            # Some field names could have colons in them avoid
+            # interpreting these as field modifiers better would
+            # probably be to put some restrictions on field names
             return txt
 
         # field modifiers
@@ -163,18 +171,20 @@ class Template(object):
         if len(parts) == 1 or parts[0] == '':
             return '{unknown field %s}' % tag_name
         else:
-            mods, tag = parts[:-1], parts[-1] #py3k has *mods, tag = parts
+            mods, tag = parts[:-1], parts[-1]  # py3k has *mods, tag = parts
 
         txt = get_or_attr(context, tag)
-        
-        #Since 'text:' and other mods can affect html on which Anki relies to
-        #process clozes, we need to make sure clozes are always
-        #treated after all the other mods, regardless of how they're specified
-        #in the template, so that {{cloze:text: == {{text:cloze:
-        #For type:, we return directly since no other mod than cloze (or other
-        #pre-defined mods) can be present and those are treated separately
+
+        # Since 'text:' and other mods can affect html on which Anki
+        # relies to process clozes, we need to make sure clozes are
+        # always treated after all the other mods, regardless of how
+        # they're specified in the template, so that {{cloze:text: ==
+        # {{text:cloze:
+        # For type:, we return directly since no other mod than cloze
+        # (or other pre-defined mods) can be present and those are
+        # treated separately
         mods.reverse()
-        mods.sort(key=lambda s: not s=="type")
+        mods.sort(key=lambda s: not s == "type")
 
         for mod in mods:
             # built-in modifiers
@@ -182,26 +192,28 @@ class Template(object):
                 # strip html
                 txt = stripHTML(txt) if txt else ""
             elif mod == 'type':
-                # type answer field; convert it to [[type:...]] for the gui code
-                # to process
+                # Type answer field; convert it to [[type:...]] for
+                # the gui code to process
                 return "[[%s]]" % tag_name
             elif mod.startswith('cq-') or mod.startswith('ca-'):
                 # cloze deletion
                 mod, extra = mod.split("-")
-                txt = self.clozeText(txt, extra, mod[1]) if txt and extra else ""
+                txt = self.clozeText(
+                    txt, extra, mod[1]) if txt and extra else ""
             else:
                 # hook-based field modifier
                 mod, extra = re.search("^(.*?)(?:\((.*)\))?$", mod).groups()
                 txt = runFilter('fmod_' + mod, txt or '', extra or '', context,
-                                tag, tag_name);
+                                tag, tag_name)
                 if txt is None:
                     return '{unknown field %s}' % tag_name
         return txt
 
     def clozeText(self, txt, ord, type):
         reg = clozeReg
-        if not re.search(reg%ord, txt):
+        if not re.search(reg % ord, txt):
             return ""
+
         def repl(m):
             # replace chosen cloze with type
             if type == "q":
@@ -211,9 +223,9 @@ class Template(object):
                     return "<span class=cloze>[...]</span>"
             else:
                 return "<span class=cloze>%s</span>" % m.group(1)
-        txt = re.sub(reg%ord, repl, txt)
+        txt = re.sub(reg % ord, repl, txt)
         # and display other clozes normally
-        return re.sub(reg%"\d+", "\\1", txt)
+        return re.sub(reg % "\d+", "\\1", txt)
 
     @modifier('=')
     def render_delimiter(self, tag_name=None, context=None):

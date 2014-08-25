@@ -2,8 +2,10 @@
 # Copyright: Damien Elmes <anki@ichi2.net>
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
-import os, sys, re
 import gettext
+import os
+import re
+import sys
 import threading
 
 langs = [
@@ -20,9 +22,9 @@ langs = [
     (u"Italiano", "it"),
     (u"Lenga d'òc", "oc"),
     (u"Magyar", "hu"),
-    (u"Nederlands","nl"),
-    (u"Norsk","nb"),
-    (u"Occitan","oc"),
+    (u"Nederlands", "nl"),
+    (u"Norsk", "nb"),
+    (u"Occitan", "oc"),
     (u"Plattdüütsch", "nds"),
     (u"Polski", "pl"),
     (u"Português Brasileiro", "pt_BR"),
@@ -37,7 +39,7 @@ langs = [
     (u"Ελληνικά", "el"),
     (u"босански", "bs"),
     (u"Български", "bg"),
-    (u"Монгол хэл","mn"),
+    (u"Монгол хэл", "mn"),
     (u"русский язык", "ru"),
     (u"Српски", "sr"),
     (u"українська мова", "uk"),
@@ -57,6 +59,7 @@ threadLocal = threading.local()
 currentLang = None
 currentTranslation = None
 
+
 def localTranslation():
     "Return the translation local to this thread, or the default."
     if getattr(threadLocal, 'currentTranslation', None):
@@ -64,11 +67,14 @@ def localTranslation():
     else:
         return currentTranslation
 
+
 def _(str):
     return localTranslation().ugettext(str)
 
+
 def ngettext(single, plural, n):
     return localTranslation().ungettext(single, plural, n)
+
 
 def langDir():
     dir = os.path.join(os.path.dirname(
@@ -78,6 +84,7 @@ def langDir():
     if not os.path.isdir(dir):
         dir = "/usr/share/anki/locale"
     return dir
+
 
 def setLang(lang, local=True):
     trans = gettext.translation(
@@ -90,12 +97,14 @@ def setLang(lang, local=True):
         currentLang = lang
         currentTranslation = trans
 
+
 def getLang():
     "Return the language local to this thread, or the default."
     if getattr(threadLocal, 'currentLang', None):
         return threadLocal.currentLang
     else:
         return currentLang
+
 
 def noHint(str):
     "Remove translation hint from end of string."

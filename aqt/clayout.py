@@ -4,16 +4,21 @@
 
 import re
 
-from aqt.qt import *
-from anki.consts import *
-import aqt
+from PyQt4.QtCore import QPoint, Qt, SIGNAL, SLOT
+from PyQt4.QtGui import QDialog, QDialogButtonBox, QFont, QHBoxLayout, \
+    QLabel, QMenu, QPushButton, QTabWidget, QVBoxLayout, QWidget
+from PyQt4.QtWebKit import QWebPage
+
+from anki.consts import MODEL_CLOZE
+from anki.lang import _, ngettext
 from anki.sound import playFromText, clearAudioQueue
 from aqt.utils import saveGeom, restoreGeom, getBase, mungeQA,\
     showInfo, askUser, getOnlyText, \
-     showWarning, openHelp
+    showWarning, openHelp
 from anki.utils import isMac, isWin, joinFields
 from aqt.webview import AnkiWebView
 import anki.js
+import aqt
 
 
 class CardLayout(QDialog):
@@ -124,6 +129,7 @@ class CardLayout(QDialog):
         pform.frontPrevBox.addWidget(pform.frontWeb)
         pform.backWeb = AnkiWebView(True)
         pform.backPrevBox.addWidget(pform.backWeb)
+
         for wig in pform.frontWeb, pform.backWeb:
             wig.page().setLinkDelegationPolicy(
                 QWebPage.DelegateExternalLinks)
@@ -138,7 +144,7 @@ class CardLayout(QDialog):
         cards = self.mm.tmplUseCount(self.model, idx)
         cards = ngettext("%d card", "%d cards", cards) % cards
         msg = (_("Delete the '%(a)s' card type, and its %(b)s?") %
-            dict(a=self.model['tmpls'][idx]['name'], b=cards))
+               dict(a=self.model['tmpls'][idx]['name'], b=cards))
         if not askUser(msg):
             return
         if not self.mm.remTemplate(self.model, self.cards[idx].template()):
@@ -231,13 +237,13 @@ Please create a new card type first."""))
         ti = self.maybeTextInput
         base = getBase(self.mw.col)
         self.tab['pform'].frontWeb.stdHtml(
-            ti(mungeQA(self.mw.col, c.q(reload=True))), self.mw.reviewer._styles(),
-            bodyClass="card card%d" % (c.ord+1), head=base,
-            js=anki.js.browserSel)
+            ti(mungeQA(self.mw.col, c.q(reload=True))),
+            self.mw.reviewer._styles(), bodyClass="card card%d" % (c.ord + 1),
+            head=base, js=anki.js.browserSel)
         self.tab['pform'].backWeb.stdHtml(
-            ti(mungeQA(self.mw.col, c.a()), type='a'), self.mw.reviewer._styles(),
-            bodyClass="card card%d" % (c.ord+1), head=base,
-            js=anki.js.browserSel)
+            ti(mungeQA(self.mw.col, c.a()), type='a'),
+            self.mw.reviewer._styles(), bodyClass="card card%d" % (c.ord + 1),
+            head=base, js=anki.js.browserSel)
         clearAudioQueue()
         if c.id not in self.playedAudio:
             playFromText(c.q())
@@ -250,6 +256,7 @@ Please create a new card type first."""))
         origLen = len(txt)
         txt = txt.replace("<hr id=answer>", "")
         hadHR = origLen != len(txt)
+
         def answerRepl(match):
             res = self.mw.reviewer.correct(u"exomple", u"an example")
             if hadHR:
@@ -278,7 +285,7 @@ Please create a new card type first."""))
 
     def onReorder(self):
         n = len(self.cards)
-        cur = self.card.template()['ord']+1
+        cur = self.card.template()['ord'] + 1
         pos = getOnlyText(
             _("Enter new card position (1...%s):") % n,
             default=str(cur))
@@ -352,7 +359,7 @@ adjust the template manually to switch the question and answer."""))
         a = m.addAction(_("Browser Appearance"))
         a.connect(a, SIGNAL("triggered()"),
                   self.onBrowserDisplay)
-        m.exec_(button.mapToGlobal(QPoint(0,0)))
+        m.exec_(button.mapToGlobal(QPoint(0, 0)))
 
     def onBrowserDisplay(self):
         d = QDialog()
@@ -383,7 +390,7 @@ adjust the template manually to switch the question and answer."""))
         l = QVBoxLayout()
         lab = QLabel(_("""\
 Enter deck to place new %s cards in, or leave blank:""") %
-                           self.card.template()['name'])
+                     self.card.template()['name'])
         lab.setWordWrap(True)
         l.addWidget(lab)
         te = TagEdit(d, type=1)
@@ -432,7 +439,8 @@ Enter deck to place new %s cards in, or leave blank:""") %
 
     def _addField(self, widg, field, font, size):
         t = widg.toPlainText()
-        t +="\n<div style='font-family: %s; font-size: %spx;'>{{%s}}</div>\n" % (
+        t += """\
+\n<div style='font-family: %s; font-size: %spx;'>{{%s}}</div>\n""" % (
             font, size, field)
         widg.setPlainText(t)
         self.saveCard()

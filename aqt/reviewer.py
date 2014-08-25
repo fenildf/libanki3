@@ -3,19 +3,21 @@
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
 from __future__ import division
+import HTMLParser
+import cgi
 import difflib
 import re
-import cgi
 import unicodedata as ucd
-import HTMLParser
 
-from anki.lang import _, ngettext
-from aqt.qt import *
-from anki.utils import  stripHTML, isMac, json
+from PyQt4.QtCore import Qt, SIGNAL
+from PyQt4.QtGui import QCursor, QKeySequence, QMenu, QMessageBox, QShortcut
+
 from anki.hooks import addHook, runHook
-from anki.sound import playFromText, clearAudioQueue, play
-from aqt.utils import mungeQA, getBase, openLink, tooltip, askUserDialog
+from anki.lang import _, ngettext
+from anki.sound import clearAudioQueue, play, playFromText
+from anki.utils import isMac, json, stripHTML
 from aqt.sound import getAudio
+from aqt.utils import askUserDialog, getBase, mungeQA, openLink, tooltip
 import aqt
 
 
@@ -30,7 +32,7 @@ class Reviewer(object):
         self.hadCardQueue = False
         self._answeredIds = []
         self._recordedAudio = None
-        self.typeCorrect = None # web init happens before this is set
+        self.typeCorrect = None  # web init happens before this is set
         self.state = None
         self.bottom = aqt.toolbar.BottomBar(mw, mw.bottomWeb)
         # qshortcut so we don't autorepeat
@@ -47,7 +49,7 @@ class Reviewer(object):
         if isMac:
             self.bottom.web.setFixedHeight(46)
         else:
-            self.bottom.web.setFixedHeight(52+self.mw.fontHeightDelta*4)
+            self.bottom.web.setFixedHeight(54 + self.mw.fontHeightDelta * 4)
         self.bottom.web.setLinkHandler(self._linkHandler)
         self._reps = None
         self.nextCard()
@@ -70,12 +72,13 @@ class Reviewer(object):
     def nextCard(self):
         elapsed = self.mw.col.timeboxReached()
         if elapsed:
-            part1 = ngettext("%d card studied in", "%d cards studied in", elapsed[1]) % elapsed[1]
+            part1 = ngettext("%d card studied in",
+                             "%d cards studied in", elapsed[1]) % elapsed[1]
             mins = int(round(elapsed[0]/60))
             part2 = ngettext("%s minute.", "%s minutes.", mins) % mins
             fin = _("Finish")
-            diag = askUserDialog("%s %s" % (part1, part2),
-                             [_("Continue"), fin])
+            diag = askUserDialog(
+                "%s %s" % (part1, part2), [_("Continue"), fin])
             diag.setIcon(QMessageBox.Information)
             if diag.run() == fin:
                 return self.mw.moveToState("deckBrowser")
@@ -178,14 +181,13 @@ function _typeAnsPress() {
         base = getBase(self.mw.col)
         # main window
         self.web.stdHtml(self._revHtml, self._styles(),
-            loadCB=lambda x: self._showQuestion(),
-            head=base)
+                         loadCB=lambda x: self._showQuestion(), head=base)
         # show answer / ease buttons
         self.bottom.web.show()
         self.bottom.web.stdHtml(
             self._bottomHTML(),
             self.bottom._css + self._bottomCSS,
-        loadCB=lambda x: self._showAnswerButton())
+            loadCB=lambda x: self._showAnswerButton())
 
     # Showing the question
     ##########################################################################
@@ -208,7 +210,7 @@ The front of this card is empty. Please run Tools>Empty Cards.""")
             playFromText(q)
         # render & update bottom
         q = self._mungeQA(q)
-        klass = "card card%d" % (c.ord+1)
+        klass = "card card%d" % (c.ord + 1)
         self.web.eval("_updateQA(%s, false, '%s');" % (json.dumps(q), klass))
         self._toggleStar()
         if self._bottomReady:
@@ -418,6 +420,7 @@ Please run Tools>Empty Cards""")
         # compare with typed answer
         res = self.correct(given, cor, showBad=False)
         # and update the type answer area
+
         def repl(match):
             # can't pass a string in directly, and can't use re.escape as it
             # escapes too much
@@ -432,14 +435,15 @@ Please run Tools>Empty Cards""")
         return re.sub(self.typeAnsPat, repl, buf)
 
     def _contentForCloze(self, txt, idx):
-        matches = re.findall("\{\{c%s::(.+?)\}\}"%idx, txt)
+        matches = re.findall("\{\{c%s::(.+?)\}\}" % idx, txt)
         if not matches:
             return None
+
         def noHint(txt):
             if "::" in txt:
                 return txt.split("::")[0]
             return txt
-        matches = [noHint(txt) for txt in matches]
+        matches = [noHint(m_txt) for m_txt in matches]
         uniqMatches = set(matches)
         if len(uniqMatches) == 1:
             txt = matches[0]
@@ -461,9 +465,11 @@ Please run Tools>Empty Cards""")
         givenPoint = 0
         correctPoint = 0
         offby = 0
+
         def logBad(old, new, str, array):
             if old != new:
                 array.append((False, str[old:new]))
+
         def logGood(start, cnt, str, array):
             if cnt:
                 array.append((True, str[start:start+cnt]))
@@ -485,10 +491,13 @@ Please run Tools>Empty Cards""")
     def correct(self, given, correct, showBad=True):
         "Diff-corrects the typed-in answer."
         givenElems, correctElems = self.tokenizeComparison(given, correct)
+
         def good(s):
             return "<span class=typeGood>"+cgi.escape(s)+"</span>"
+
         def bad(s):
             return "<span class=typeBad>"+cgi.escape(s)+"</span>"
+
         def missed(s):
             return "<span class=typeMissed>"+cgi.escape(s)+"</span>"
         if given == correct:
@@ -602,9 +611,12 @@ function showAnswer(txt) {
         middle = '''
 <span class=stattxt>%s</span><br>
 <button title="%s" id=ansbut onclick='py.link(\"ans\");'>%s</button>''' % (
-        self._remaining(), _("Shortcut key: %s") % _("Space"), _("Show Answer"))
+            self._remaining(), _(
+                "Shortcut key: %s") % _("Space"), _("Show Answer"))
         # wrap it in a table so it has the same top margin as the ease buttons
-        middle = "<table cellpadding=0><tr><td class=stat2 align=center>%s</td></tr></table>" % middle
+        middle = """\
+<table cellpadding=0><tr><td class=stat2 align=center>%s</td></tr></table>""" \
+            % middle
         if self.card.shouldShowTimer():
             maxTime = self.card.timeLimit() / 1000
         else:
@@ -650,8 +662,9 @@ function showAnswer(txt) {
             return l + ((2, _("Hard")), (3, _("Good")), (4, _("Easy")))
 
     def _answerButtons(self):
-        times = []
+        # times = []
         default = self._defaultEase()
+
         def but(i, label):
             if i == default:
                 extra = "id=defease"
@@ -712,7 +725,7 @@ function showAnswer(txt) {
             a = m.addAction(label)
             a.setShortcut(QKeySequence(scut))
             a.connect(a, SIGNAL("triggered()"), func)
-        runHook("Reviewer.contextMenuEvent",self,m)
+        runHook("Reviewer.contextMenuEvent", self, m)
         m.exec_(QCursor.pos())
 
     def onOptions(self):
