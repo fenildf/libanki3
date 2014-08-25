@@ -1,35 +1,51 @@
 # Copyright: Damien Elmes <anki@ichi2.net>
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
+
+import sip
+sip.setapi('QString', 2)
+sip.setapi('QVariant', 2)
+sip.setapi('QUrl', 2)
+
+try:
+    sip.setdestroyonexit(False)
+except:
+    # missing in older versions
+    pass
+
+import __builtin__
 import getpass
+import gettext
+import locale
+import optparse
 import os
 import sys
-import optparse
 import tempfile
-import __builtin__
-import locale
-import gettext
+from PyQt4.QtCore import QCoreApplication, QEvent, QIODevice, \
+    QTranslator, Qt, SIGNAL
+from PyQt4.QtGui import QApplication, QFont, QMessageBox
+from PyQt4.QtNetwork import QLocalServer, QLocalSocket
 
-from aqt.qt import *
-import anki.lang
+from anki import version as _version
 from anki.consts import HELP_SITE
 from anki.lang import langDir
 from anki.utils import isMac
-from anki import version as _version
+from aqt.qt import qtmajor, qtminor
+import anki.lang
 
-appVersion=_version
-appWebsite="http://ankisrs.net/"
-appChanges="http://ankisrs.net/docs/changes.html"
-appDonate="http://ankisrs.net/support/"
-appShared="https://ankiweb.net/shared/"
-appUpdate="https://ankiweb.net/update/desktop"
-appHelpSite=HELP_SITE
-mw = None # set on init
+appVersion = _version
+appWebsite = "http://ankisrs.net/"
+appChanges = "http://ankisrs.net/docs/changes.html"
+appDonate = "http://ankisrs.net/support/"
+appShared = "https://ankiweb.net/shared/"
+appUpdate = "https://ankiweb.net/update/desktop"
+appHelpSite = HELP_SITE
+mw = None  # set on init
 
 moduleDir = os.path.split(os.path.dirname(os.path.abspath(__file__)))[0]
 
 try:
-    import aqt.forms
-except ImportError, e:
+    import aqt.forms  # Dummy import to get the warning if it fails.
+except ImportError as e:
     if "forms" in str(e):
         print "If you're running from git, did you run build_ui.sh?"
         print
@@ -39,6 +55,7 @@ from anki.utils import checksum
 
 # Dialog manager - manages modeless windows
 ##########################################################################
+
 
 class DialogManager(object):
 
@@ -87,6 +104,7 @@ dialogs = DialogManager()
 _gtrans = None
 _qtrans = None
 
+
 def setupLang(pm, app, force=None):
     global _gtrans, _qtrans
     try:
@@ -101,7 +119,7 @@ def setupLang(pm, app, force=None):
     __builtin__.__dict__['_'] = _gtrans.ugettext
     __builtin__.__dict__['ngettext'] = _gtrans.ungettext
     anki.lang.setLang(lang, local=False)
-    if lang in ("he","ar","fa"):
+    if lang in ("he", "ar", "fa"):
         app.setLayoutDirection(Qt.RightToLeft)
     else:
         app.setLayoutDirection(Qt.LeftToRight)
@@ -112,6 +130,7 @@ def setupLang(pm, app, force=None):
 
 # App initialisation
 ##########################################################################
+
 
 class AnkiApp(QApplication):
 
@@ -175,6 +194,7 @@ class AnkiApp(QApplication):
             return True
         return QApplication.event(self, evt)
 
+
 def parseArgs(argv):
     "Returns (opts, args)."
     # py2app fails to strip this in some instances, then anki dies
@@ -187,6 +207,7 @@ def parseArgs(argv):
     parser.add_option("-p", "--profile", help="profile name to load")
     parser.add_option("-l", "--lang", help="interface language (en, de, etc)")
     return parser.parse_args(argv[1:])
+
 
 def run():
     try:
@@ -236,9 +257,9 @@ environment points to a valid, writable folder.""")
     # qt version must be up to date
     if qtmajor <= 4 and qtminor <= 6:
         QMessageBox.warning(
-            None, "Error", "Your Qt version is known to be buggy. Until you "
-          "upgrade to a newer Qt, you may experience issues such as images "
-          "failing to show up during review.")
+            None, "Error", """\
+Your Qt version is known to be buggy. Until you upgrade to a newer Qt, you \
+may experience issues such as images failing to show up during review.""")
 
     # profile manager
     from aqt.profiles import ProfileManager

@@ -12,6 +12,7 @@ except ImportError:
 
 Error = sqlite.Error
 
+
 class DB(object):
     def __init__(self, path, text=None, timeout=0):
         encpath = path
@@ -38,8 +39,8 @@ class DB(object):
             # execute("...where id = ?", 5)
             res = self._db.execute(sql, a)
         if self.echo:
-            #print a, ka
-            print sql, "%0.3fms" % ((time.time() - t)*1000)
+            # print a, ka
+            print sql, "%0.3fms" % ((time.time() - t) * 1000)
             if self.echo == "2":
                 print a, ka
         return res
@@ -49,7 +50,7 @@ class DB(object):
         t = time.time()
         self._db.executemany(sql, l)
         if self.echo:
-            print sql, "%0.3fms" % ((time.time() - t)*1000)
+            print sql, "%0.3fms" % ((time.time() - t) * 1000)
             if self.echo == "2":
                 print l
 
@@ -57,7 +58,7 @@ class DB(object):
         t = time.time()
         self._db.commit()
         if self.echo:
-            print "commit %0.3fms" % ((time.time() - t)*1000)
+            print "commit %0.3fms" % ((time.time() - t) * 1000)
 
     def executescript(self, sql):
         self.mod = True

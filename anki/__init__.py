@@ -2,9 +2,9 @@
 # Copyright: Damien Elmes <anki@ichi2.net>
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
-import sys
 import os
 import platform
+import sys
 
 if sys.version_info[0] > 2:
     raise Exception("Anki should be run with Python 2")
@@ -31,5 +31,11 @@ if arch[1] == "ELF":
         sys.version_info[1], arch[0][0:2])))
 
 version="2.0.28" # build scripts grep this line, so preserve formatting
+
+__version__ = version
+# We’ve been told to not touch the “version” above, so add the
+# standard (i.e. PEP 396 http://www.python.org/dev/peps/pep-0396)
+# variable, instead of replacing it.
+
 from anki.storage import Collection
 __all__ = ["Collection"]

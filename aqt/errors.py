@@ -4,9 +4,11 @@
 import sys
 import cgi
 
+from PyQt4.QtCore import QObject, QTimer, SIGNAL
+
 from anki.lang import _
-from aqt.qt import *
 from aqt.utils import showText, showWarning
+
 
 class ErrorHandler(QObject):
     "Catch stderr and write into buffer."
@@ -47,8 +49,8 @@ class ErrorHandler(QObject):
     def tempFolderMsg(self):
         return _("""\
 The permissions on your system's temporary folder are incorrect, and Anki is \
-not able to correct them automatically. Please search for 'temp folder' in the \
-Anki manual for more information.""")
+not able to correct them automatically. Please search for 'temp folder' in \
+the Anki manual for more information.""")
 
     def onTimeout(self):
         error = cgi.escape(self.pool)
@@ -61,8 +63,8 @@ Anki manual for more information.""")
         if "install mplayer" in error:
             return showWarning(_("Please install mplayer"))
         if "no default output" in error:
-            return showWarning(_("Please connect a microphone, and ensure "
-                                 "other programs are not using the audio device."))
+            return showWarning(_("""Please connect a microphone, and ensure \
+ other programs are not using the audio device."""))
         if "invalidTempFolder" in error:
             return showWarning(self.tempFolderMsg())
         if "disk I/O error" in error:

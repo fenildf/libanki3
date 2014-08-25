@@ -2,18 +2,26 @@
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
 from __future__ import division
+from cStringIO import StringIO
+import gc
+import httplib
+import httplib2
 import socket
 import time
 import traceback
-import gc
 
-from aqt.qt import *
-import aqt
+
+from PyQt4.QtCore import QObject, Qt, QThread, SIGNAL
+from PyQt4.QtGui import QDialog, QDialogButtonBox, QGridLayout, QLabel, \
+    QLineEdit, QVBoxLayout
+
 from anki import Collection
-from anki.sync import Syncer, RemoteServer, FullSyncer, MediaSyncer, \
-    RemoteMediaServer
-from anki.hooks import addHook, remHook
-from aqt.utils import tooltip, askUserDialog, showWarning, showText, showInfo
+from anki.hooks import addHook, remHook, runHook
+from anki.lang import _
+from anki.sync import FullSyncer, MediaSyncer, RemoteMediaServer, \
+    RemoteServer, Syncer
+from aqt.utils import askUserDialog, showInfo, showText, showWarning, tooltip
+import aqt
 
 
 # Sync manager
@@ -60,6 +68,7 @@ class SyncManager(QObject):
             showText(self.thread.syncMsg)
         if self.thread.uname:
             self.pm.profile['syncUser'] = self.thread.uname
+
         def delayedInfo():
             if self._didFullUp and not self._didError:
                 showInfo(_("""\
@@ -79,7 +88,7 @@ automatically."""))
                 b=self.recvBytes // 1024)))
 
     def onEvent(self, evt, *args):
-        pu = self.mw.progress.update
+        # pu = self.mw.progress.update
         if evt == "badAuth":
             tooltip(
                 _("AnkiWeb ID or password was incorrect; please try again."),
@@ -98,7 +107,8 @@ automatically."""))
             self._didFullUp = False
             self._checkFailed()
         elif evt == "sync":
-            m = None; t = args[0]
+            m = None
+            t = args[0]
             if t == "login":
                 m = _("Syncing...")
             elif t == "upload":
@@ -121,7 +131,7 @@ Please visit AnkiWeb, upgrade your deck, then try again."""))
             self._updateLabel()
         elif evt == "error":
             self._didError = True
-            showText(_("Syncing failed:\n%s")%
+            showText(_("Syncing failed:\n%s") %
                      self._rewriteError(args[0]))
         elif evt == "clockOff":
             self._clockOff()
@@ -129,8 +139,8 @@ Please visit AnkiWeb, upgrade your deck, then try again."""))
             self._checkFailed()
         elif evt == "mediaSanity":
             showWarning(_("""\
-A problem occurred while syncing media. Please use Tools>Check Media, then \
-sync again to correct the issue."""))
+A problem occurred while syncing media. Please sync again and Anki will \
+correct the issue."""))
         elif evt == "noChanges":
             pass
         elif evt == "fullSync":
@@ -162,29 +172,39 @@ Please upgrade to the latest version of Anki.""")
         # 502 is technically due to the server restarting, but we reuse the
         # error message
         elif "code: 502" in err:
-            return _("AnkiWeb is under maintenance. Please try again in a few minutes.")
+            return _(u"""\
+AnkiWeb is under maintenance. Please try again in a few minutes.""")
         elif "code: 503" in err:
             return _("""\
 AnkiWeb is too busy at the moment. Please try again in a few minutes.""")
         elif "code: 504" in err:
-            return _("504 gateway timeout error received. Please try temporarily disabling your antivirus.")
+            return _(u"""\
+504 gateway timeout error received. Please try temporarily disabling your \
+antivirus.""")
         elif "code: 409" in err:
-            return _("Only one client can access AnkiWeb at a time. If a previous sync failed, please try again in a few minutes.")
+            return _(u"""\
+Only one client can access AnkiWeb at a time. If a previous sync failed, \
+please try again in a few minutes.""")
         elif "10061" in err or "10013" in err or "10053" in err:
-            return _(
-                "Antivirus or firewall software is preventing Anki from connecting to the internet.")
+            return _(u"""\
+Antivirus or firewall software is preventing Anki from connecting to the \
+internet.""")
         elif "10054" in err or "Broken pipe" in err:
-            return _("Connection timed out. Either your internet connection is experiencing problems, or you have a very large file in your media folder.")
+            return _("""\
+Connection timed out. Either your internet connection is experiencing \
+problems, or you have a very large file in your media folder.""")
         elif "Unable to find the server" in err:
-            return _(
-                "Server not found. Either your connection is down, or antivirus/firewall "
-                "software is blocking Anki from connecting to the internet.")
+            return _(u"""\
+Server not found. Either your connection is down, or antivirus/firewall \
+software is blocking Anki from connecting to the internet.""")
         elif "code: 407" in err:
             return _("Proxy authentication required.")
         elif "code: 413" in err:
             return _("Your collection or a media file is too large to sync.")
         elif "EOF occurred in violation of protocol" in err:
-            return _("Error establishing a secure connection. This is usually caused by filtering software, or problems with your ISP.")
+            return _("""\
+Error establishing a secure connection. This is usually caused by \
+filtering software, or problems with your ISP.""")
         return err
 
     def _getUserPass(self):
@@ -213,7 +233,7 @@ enter your details below.""") %
         passwd.setEchoMode(QLineEdit.Password)
         g.addWidget(passwd, 1, 1)
         vbox.addLayout(g)
-        bb = QDialogButtonBox(QDialogButtonBox.Ok|QDialogButtonBox.Cancel)
+        bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         bb.button(QDialogButtonBox.Ok).setAutoDefault(True)
         self.connect(bb, SIGNAL("accepted()"), d.accept)
         self.connect(bb, SIGNAL("rejected()"), d.reject)
@@ -242,10 +262,8 @@ any changes you have made on AnkiWeb or your other devices since the \
 last sync to this device will be lost.
 
 After all devices are in sync, future reviews and added cards can be merged \
-automatically."""),
-                [_("Upload to AnkiWeb"),
-                 _("Download from AnkiWeb"),
-                 _("Cancel")])
+automatically."""), [_("Upload to AnkiWeb"), _("Download from AnkiWeb"),
+                     _("Cancel")])
         diag.setDefault(2)
         ret = diag.run()
         if ret == _("Upload to AnkiWeb"):
@@ -266,11 +284,12 @@ Your collection is in an inconsistent state. Please run Tools>\
 Check Database, then sync again."""))
 
     def badUserPass(self):
-        aqt.preferences.Preferences(self, self.pm.profile).dialog.tabWidget.\
-                                         setCurrentIndex(1)
+        aqt.preferences.Preferences(
+            self, self.pm.profile).dialog.tabWidget. setCurrentIndex(1)
 
 # Sync thread
 ######################################################################
+
 
 class SyncThread(QThread):
 
@@ -287,7 +306,7 @@ class SyncThread(QThread):
         self.syncMsg = ""
         self.uname = ""
         try:
-            self.col = Collection(self.path, log=True)
+            self.col = Collection(self.path)
         except:
             self.fireEvent("corrupt")
             return
@@ -297,6 +316,7 @@ class SyncThread(QThread):
         self.recvTotal = 0
         # throttle updates; qt doesn't handle lots of posted events well
         self.byteUpdate = time.time()
+
         def syncEvent(type):
             self.fireEvent("sync", type)
         def syncMsg(msg):
@@ -305,10 +325,12 @@ class SyncThread(QThread):
             if (time.time() - self.byteUpdate) > 0.1:
                 self.byteUpdate = time.time()
                 return True
+
         def sendEvent(bytes):
             self.sentTotal += bytes
             if canPost():
                 self.fireEvent("send", self.sentTotal)
+
         def recvEvent(bytes):
             self.recvTotal += bytes
             if canPost():
@@ -348,9 +370,12 @@ class SyncThread(QThread):
             ret = self.client.sync()
         except Exception, e:
             log = traceback.format_exc()
-            err = repr(str(e))
-            if ("Unable to find the server" in err or
-                "Errno 2" in err):
+            try:
+                err = unicode(e[0], "utf8", "ignore")
+            except:
+                # number, exception with no args, etc
+                err = ""
+            if "Unable to find the server" in err:
                 self.fireEvent("offline")
             else:
                 if not err:
@@ -429,9 +454,7 @@ class SyncThread(QThread):
 ######################################################################
 
 CHUNK_SIZE = 65536
-import httplib, httplib2
-from cStringIO import StringIO
-from anki.hooks import runHook
+
 
 # sending in httplib
 def _incrementalSend(self, data):
@@ -455,16 +478,14 @@ def _incrementalSend(self, data):
 
 httplib.HTTPConnection.send = _incrementalSend
 
+
 # receiving in httplib2
-# this is an augmented version of httplib's request routine that:
-# - doesn't assume requests will be tried more than once
-# - calls a hook for each chunk of data so we can update the gui
 # - retries only when keep-alive connection is closed
 def _conn_request(self, conn, request_uri, method, body, headers):
     for i in range(2):
         try:
             if conn.sock is None:
-              conn.connect()
+                conn.connect()
             conn.request(method, request_uri, body, headers)
         except socket.timeout:
             raise
@@ -475,7 +496,7 @@ def _conn_request(self, conn, request_uri, method, body, headers):
         except httplib2.ssl_SSLError:
             conn.close()
             raise
-        except socket.error, e:
+        except socket.error:
             conn.close()
             raise
         except httplib.HTTPException:
