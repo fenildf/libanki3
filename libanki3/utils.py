@@ -19,31 +19,11 @@ import tempfile
 import time
 import traceback
 
-from anki.lang import _, ngettext
+from .lang import _, ngettext
 
-
-if sys.version_info[1] < 5:
-    def format_string(a, b):
-        return a % b
-    locale.format_string = format_string
-
-try:
-    import simplejson as json
-    # make sure simplejson's loads() always returns unicode
-    # we don't try to support .load()
-    origLoads = json.loads
-
-    def loads(s, *args, **kwargs):
-        if not isinstance(s, unicode):
-            s = unicode(s, "utf8")
-        return origLoads(s, *args, **kwargs)
-    json.loads = loads
-except ImportError:
-    import json
 
 # Time handling
 ##############################################################################
-
 
 def intTime(scale=1):
     "The time in integer seconds. Pass scale=1000 to get milliseconds."
@@ -298,9 +278,8 @@ def joinFields(list):
 def splitFields(string):
     return string.split("\x1f")
 
-# Checksums
-##############################################################################
 
+# Checksums
 
 def checksum(data):
     if isinstance(data, unicode):
@@ -312,45 +291,9 @@ def fieldChecksum(data):
     # 32 bit unsigned number from first 8 digits of sha1 hash
     return int(checksum(stripHTMLMedia(data).encode("utf-8"))[:8], 16)
 
-# Temp files
-##############################################################################
-
-_tmpdir = None
-
-
-def tmpdir():
-    "A reusable temp folder which we clean out on each program invocation."
-    global _tmpdir
-    if not _tmpdir:
-        def cleanup():
-            shutil.rmtree(_tmpdir)
-        import atexit
-        atexit.register(cleanup)
-        _tmpdir = unicode(os.path.join(tempfile.gettempdir(), "anki_temp"),
-                          sys.getfilesystemencoding())
-    if not os.path.exists(_tmpdir):
-        os.mkdir(_tmpdir)
-    return _tmpdir
-
-
-def tmpfile(prefix="", suffix=""):
-    (fd, name) = tempfile.mkstemp(dir=tmpdir(), prefix=prefix, suffix=suffix)
-    os.close(fd)
-    return name
-
-
-def namedtmp(name, rm=True):
-    "Return tmpdir+name. Deletes any existing file."
-    path = os.path.join(tmpdir(), name)
-    if rm:
-        try:
-            os.unlink(path)
-        except (OSError, IOError):
-            pass
-    return path
+# Removed DIY tmp file code. Use std tempfile instead
 
 # Cmd invocation
-##############################################################################
 
 
 def call(argv, wait=True, **kwargs):

@@ -1,18 +1,25 @@
 # -*- coding: utf-8 -*-
 # Copyright: Damien Elmes <anki@ichi2.net>
-# License: GNU AGPL, version 3 or later; http://www.gnu.org/copyleft/agpl.html
+# Copyright © 2014 Roland Sieker <ospalh@gmail.com>
+#
+# License: GNU AGPL, version 3 or later;
+# http://www.gnu.org/copyleft/agpl.html
 
 import datetime
 import os
 import re
 import shutil
+import simplejson as json
 import time
 
-from anki.collection import _Collection
-from anki.consts import SCHEMA_VERSION
-from anki.db import DB
-from anki.storage import _addSchema, _getColVars, _addColVars,  _updateIndices
-from anki.utils import intTime, tmpfile, ids2str, splitFields, base91, json
+from . import models
+# Watch out to keep this separate from # self.col.models
+from .collection import _Collection
+from .consts import SCHEMA_VERSION
+from .db import DB
+from .storage import _addSchema, _getColVars, _addColVars,  _updateIndices
+from .utils import base91, ids2str, intTime, minimizeHTML, splitFields, tmpfile
+
 
 #
 # Upgrading is the first step in migrating to 2.0.
@@ -192,7 +199,6 @@ select id, id, modelId, cast(created*1000 as int), cast(modified as int),
         map = {}
         data = []
         factidmap = {}
-        from anki.utils import minimizeHTML
         highest = 0
         for c, row in enumerate(facts):
             oldid = row[0]
@@ -360,7 +366,6 @@ insert or replace into col select id, cast(created as int), :t,
         db.execute("drop table deckVars")
 
     def _migrateModels(self):
-        import anki.models
         db = self.db
         # times = {}
         mods = {}
@@ -371,7 +376,7 @@ insert or replace into col select id, cast(created as int), :t,
             if t > 4294967296:
                 t >>= 32
             assert t > 0
-            m = anki.models.defaultModel.copy()
+            m = models.defaultModel.copy()
             m['id'] = t
             m['name'] = row[1]
             m['mod'] = intTime()
@@ -387,9 +392,8 @@ insert or replace into col select id, cast(created as int), :t,
         db.execute("drop table models")
 
     def _fieldsForModel(self, mid):
-        import anki.models
         db = self.db
-        dconf = anki.models.defaultField
+        dconf = models.defaultField
         flds = []
         # note: qsize & qcol are used in upgrade then discarded
         for c, row in enumerate(db.all("""
@@ -415,9 +419,8 @@ order by ordinal""", mid)):
         return flds
 
     def _templatesForModel(self, mid, flds):
-        import anki.models
         db = self.db
-        dconf = anki.models.defaultTemplate
+        dconf = models.defaultTemplate
         tmpls = []
         for c, row in enumerate(db.all("""
 select name, active, qformat, aformat, questionInAnswer,

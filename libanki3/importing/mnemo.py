@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 # Copyright: Damien Elmes <anki@ichi2.net>
-# License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
+# Copyright © 2014 Roland Sieker <ospalh@gmail.com>
+#
+# License: GNU AGPL, version 3 or later;
+# http://www.gnu.org/licenses/agpl.html
 
 import re
 import time
 
-from anki.db import DB
-from anki.importing.noteimp import NoteImporter, ForeignNote, ForeignCard
-from anki.lang import ngettext
-from anki.stdmodels import addBasicModel, addClozeModel
+from ..db import DB
+from ..importing.noteimp import NoteImporter, ForeignNote, ForeignCard
+from ..lang import ngettext
+from ..stdmodels import addBasicModel, addClozeModel
 
 
 class MnemosyneImporter(NoteImporter):

@@ -4,15 +4,15 @@
 
 import cgi
 
-from anki.consts import NEW_CARDS_RANDOM
-from anki.importing.base import Importer
-from anki.lang import _, ngettext
-from anki.utils import fieldChecksum, guid64, timestampID, \
-    joinFields, intTime, splitFields
+from ..consts import NEW_CARDS_RANDOM
+from ..lang import _, ngettext
+from ..utils import fieldChecksum, guid64, intTime, joinFields, splitFields, \
+    timestampID
+from .base import Importer
+
 
 # Stores a list of fields, tags and deck
 ######################################################################
-
 
 class ForeignNote(object):
     "An temporary object storing fields and attributes."

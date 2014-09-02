@@ -6,9 +6,9 @@ import os
 import re
 import traceback
 
-from anki.lang import _
-from anki.upgrade import Upgrader
-from anki.importing.anki2 import Anki2Importer
+from ..lang import _
+from ..upgrade import Upgrader
+from .anki2 import Anki2Importer
 
 
 class Anki1Importer(Anki2Importer):

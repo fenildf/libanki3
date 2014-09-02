@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright: Andreas Klauer <Andreas.Klauer@metamorpher.de>
+# Copyright © 2014 Roland Sieker <ospalh@gmail.com>
+#
 # License: BSD-3
 
 import cgi
@@ -9,8 +11,8 @@ import random
 import time
 import xml.etree.ElementTree as ET
 
-from anki.importing.noteimp import NoteImporter, ForeignNote, ForeignCard
-from anki.stdmodels import addForwardReverse
+from .noteimp import NoteImporter, ForeignNote, ForeignCard
+from ..stdmodels import addForwardReverse
 
 ONE_DAY = 60 * 60 * 24
 

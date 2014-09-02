@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 # Copyright: petr.michalec@gmail.com
-# License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
+# Copyright © 2014 Roland Sieker <ospalh@gmail.com>
+#
+# License: GNU GPL, version 3 or later;
+# http://www.gnu.org/licenses/agpl.html
 
 from string import capwords
 from types import DictType, InstanceType
@@ -10,10 +13,10 @@ import sys
 import time
 import unicodedata
 
-from anki.importing.noteimp import NoteImporter, ForeignNote, ForeignCard
-from anki.lang import _
-from anki.lang import ngettext
-from anki.stdmodels import addBasicModel
+from .noteimp import NoteImporter, ForeignNote, ForeignCard
+from ..lang import _
+from ..lang import ngettext
+from ..stdmodels import addBasicModel
 
 
 class SmartDict(dict):

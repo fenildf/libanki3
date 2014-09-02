@@ -1,19 +1,23 @@
 # -*- coding: utf-8 -*-
 # Copyright: Damien Elmes <anki@ichi2.net>
-# License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
+# Copyright © 2014 Roland Sieker <ospalh@gmail.com>
+#
+# License: GNU AGPL, version 3 or later;
+# http://www.gnu.org/licenses/agpl.html
 
 import copy
 import os
 import re
+import simplejson as json
 
-from anki.collection import _Collection
-from anki.consts import MODEL_CLOZE, MODEL_STD, SCHEMA_VERSION
-from anki.db import DB
-from anki.lang import _
-from anki.stdmodels import addBasicModel, addClozeModel, \
+from .collection import _Collection
+from .consts import MODEL_CLOZE, MODEL_STD, SCHEMA_VERSION
+from .db import DB
+from .lang import _
+from .stdmodels import addBasicModel, addClozeModel, \
     addForwardOptionalReverse, addForwardReverse
-from anki.utils import intTime, json
-
+from .utils import intTime
+from . import models
 
 def Collection(path, lock=True, server=False, sync=True, log=False):
     "Open a new or existing collection. Path must be unicode."
@@ -106,9 +110,9 @@ def _upgrade(col, ver):
         col.db.execute("update col set ver = 5")
     if ver < 6:
         col.modSchema()
-        import anki.models
         for m in col.models.all():
-            m['css'] = anki.models.defaultModel['css']
+            m['css'] = models.defaultModel['css']
+            # models from ., not col.models.
             for t in m['tmpls']:
                 if 'css' not in t:
                     # ankidroid didn't bump version

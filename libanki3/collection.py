@@ -12,24 +12,28 @@ import random
 import time
 import traceback
 
-from anki.consts import HELP_SITE, MODEL_CLOZE, MODEL_STD, \
+from . import __version__
+from . import db as libanki_db  # to clearly differtiate from self.db
+from .consts import HELP_SITE, MODEL_CLOZE, MODEL_STD, \
     NEW_CARDS_DISTRIBUTE, NEW_CARDS_DUE, REM_CARD, REM_NOTE
-from anki.decks import DeckManager
-from anki.errors import AnkiError
-from anki.hooks import runFilter, runHook
-from anki.lang import _, ngettext
-from anki.media import MediaManager
-from anki.models import ModelManager
-from anki.sched import Scheduler
-from anki.sound import stripSounds
-from anki.tags import TagManager
-from anki.utils import fieldChecksum, ids2str, intTime, joinFields, json, \
+from .decks import DeckManager
+from .errors import AnkiError
+from .hooks import runFilter, runHook
+from .lang import _, ngettext
+from .media import MediaManager
+from .models import ModelManager
+from .sched import Scheduler
+from .sound import stripSounds
+from .tags import TagManager
+from .utils import fieldChecksum, ids2str, intTime, joinFields, json, \
     maxID, splitFields, stripHTML
-import anki.cards
-import anki.find
-import anki.latex  # sets up hook
-import anki.notes
-import anki.template
+from .cards import Card
+
+import .find
+import .latex  # sets up hook
+from .notes import Note
+import .template
+
 
 defaultConf = {
     # review options
@@ -58,7 +62,7 @@ class _Collection(object):
         self.db = db
         self.path = db._path
         self._openLog()
-        self.log(self.path, anki.version)
+        self.log(self.path, __version__)
         self.server = server
         self._lastSave = time.time()
         self.clearUndo()
@@ -162,9 +166,8 @@ crt=?, mod=?, scm=?, dty=?, usn=?, ls=?, conf=?""",
 
     def reopen(self):
         "Reconnect to DB (after changing threads, etc)."
-        import anki.db
         if not self.db:
-            self.db = anki.db.DB(self.path)
+            self.db = libanki_db.DB(self.path)
             self.media.connect()
             self._openLog()
 
@@ -210,10 +213,10 @@ crt=?, mod=?, scm=?, dty=?, usn=?, ls=?, conf=?""",
     ##########################################################################
 
     def getCard(self, id):
-        return anki.cards.Card(self, id)
+        return Card(self, id)
 
     def getNote(self, id):
-        return anki.notes.Note(self, id=id)
+        return Note(self, id=id)
 
     # Utils
     ##########################################################################
@@ -244,7 +247,7 @@ crt=?, mod=?, scm=?, dty=?, usn=?, ls=?, conf=?""",
 
     def newNote(self, forDeck=True):
         "Return a new note with the current model."
-        return anki.notes.Note(self, self.models.current(forDeck))
+        return Note(self, self.models.current(forDeck))
 
     def addNote(self, note):
         "Add a note to the collection. Return number of new cards."
@@ -371,14 +374,14 @@ insert into cards values (?,?,?,?,?,?,0,0,?,0,0,0,0,0,0,0,0,"")""",
             cms = note.model()['tmpls']
         if not cms:
             return []
-        cards = []
+        preview_cards = []
         for template in cms:
-            cards.append(self._newCard(note, template, 1, flush=False))
-        return cards
+            preview_cards.append(self._newCard(note, template, 1, flush=False))
+        return preview_cards
 
     def _newCard(self, note, template, due, flush=True):
         "Create a new card."
-        card = anki.cards.Card(self)
+        card = Card(self)
         card.nid = note.id
         card.ord = template['ord']
         card.did = template['did'] or note.model()['did']

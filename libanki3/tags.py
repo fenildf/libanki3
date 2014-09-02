@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 # Copyright: Damien Elmes <anki@ichi2.net>
-# License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
+# Copyright © 2014 Roland Sieker <ospalh@gmail.com>
+#
+# License: GNU AGPL, version 3 or later;
+# http://www.gnu.org/licenses/agpl.html
 
-from anki.utils import intTime, ids2str, json
-from anki.hooks import runHook
+from .utils import intTime, ids2str, json
+from .hooks import runHook
 import re
 
 """

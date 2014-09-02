@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
 # Copyright: Damien Elmes <anki@ichi2.net>
-# License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
+# Copyright © 2014 Roland Sieker <ospalh@gmail.com>
+#
+# License: GNU AGPL, version 3 or later;
+# http://www.gnu.org/licenses/agpl.html
 
 import cgi
 import os
 import re
 import shutil
 
-from anki.utils import call, checksum, isMac, namedtmp, stripHTML, tmpdir
-from anki.hooks import addHook
-from anki.lang import _
+from .utils import call, checksum, isMac, namedtmp, stripHTML, tmpdir
+from .hooks import addHook
+from .lang import _
 
 # if you modify these in an add-on, you must make sure to take tmp.tex as the
 # input, and output tmp.png as the output file

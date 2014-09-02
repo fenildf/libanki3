@@ -3,7 +3,7 @@
 import os.path
 import re
 
-from anki.template import Template
+from . import Template
 
 
 class View(object):

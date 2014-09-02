@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
 # Copyright: Damien Elmes <anki@ichi2.net>
-# License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
+# Copyright © 2014 Roland Sieker <ospalh@gmail.com>
+#
+# License: GNU AGPL, version 3 or later;
+# http://www.gnu.org/licenses/agpl.html
 
 import copy
 import re
-
-from anki.consts import MODEL_CLOZE, MODEL_STD
-from anki.hooks import runHook
-from anki.lang import _
-from anki.utils import checksum, ids2str, intTime, joinFields, json, \
-    splitFields
+import simplejson as json
 import time
+
+from .consts import MODEL_CLOZE, MODEL_STD
+from .hooks import runHook
+from .lang import _
+from .utils import checksum, ids2str, intTime, joinFields, splitFields
+
 
 # Models
 ##########################################################################
@@ -313,7 +317,7 @@ and notes.mid = ? and cards.ord = ?""", m['id'], ord)
 
         def wrap(txt):
             def repl(match):
-                return '{{' + match.group(1) + match.group(2) + txt +  '}}'
+                return '{{' + match.group(1) + match.group(2) + txt + '}}'
             return repl
         for t in m['tmpls']:
             for fmt in ('qfmt', 'afmt'):

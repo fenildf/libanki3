@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 # Copyright: Damien Elmes <anki@ichi2.net>
-# License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
+# Copyright © 2014 Roland Sieker <ospalh@gmail.com>
+#
+# License: GNU AGPL, version 3 or later;
+# http://www.gnu.org/licenses/agpl.html
 
 from __future__ import division
 from heapq import heappop, heappush
@@ -9,14 +12,14 @@ import itertools
 import random
 import time
 
-# from anki.cards import Card
-from anki.consts import DYN_ADDED, DYN_BIGINT, DYN_DUE, DYN_DUEPRIORITY, \
+# from .cards import Card
+from .consts import DYN_ADDED, DYN_BIGINT, DYN_DUE, DYN_DUEPRIORITY, \
     DYN_LAPSES, DYN_OLDEST, DYN_RANDOM, DYN_REVADDED, DYN_SMALLINT, \
     NEW_CARDS_DISTRIBUTE, NEW_CARDS_DUE, NEW_CARDS_FIRST, NEW_CARDS_LAST, \
     NEW_CARDS_RANDOM
-from anki.hooks import runHook
-from anki.utils import ids2str, intTime, fmtTimeSpan
-from anki.lang import _
+from .hooks import runHook
+from .utils import ids2str, intTime, fmtTimeSpan
+from .lang import _
 
 # queue types: 0=new/cram, 1=lrn, 2=rev, 3=day lrn, -1=suspended, -2=buried
 # revlog types: 0=lrn, 1=rev, 2=relrn, 3=cram

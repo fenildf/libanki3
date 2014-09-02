@@ -3,11 +3,11 @@
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
 import os
+import unicodedata
 import zipfile
 
-from anki.importing.anki2 import Anki2Importer
-import unicodedata
-from anki.utils import tmpfile, json
+from .anki2 import Anki2Importer
+from ..utils import tmpfile, json
 
 
 class AnkiPackageImporter(Anki2Importer):

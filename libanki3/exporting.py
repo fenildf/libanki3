@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
 # Copyright: Damien Elmes <anki@ichi2.net>
-# License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
+# Copyright © 2014 Roland Sieker <ospalh@gmail.com>
+#
+# License: GNU AGPL, version 3 or later;
+# http://www.gnu.org/licenses/agpl.html
 
 import os
 import re
 import shutil
 import zipfile
 
-from anki import Collection
-from anki.hooks import runHook
-from anki.lang import _
-from anki.utils import ids2str, json, splitFields
+from . import Collection
+from .hooks import runHook
+from .lang import _
+from .utils import ids2str, json, splitFields
 
 
 class Exporter(object):

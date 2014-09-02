@@ -4,12 +4,13 @@
 
 from __future__ import division
 import datetime
-import json
+import simplejson as json
 import time
 
-from anki.lang import _, ngettext
-from anki.utils import fmtTimeSpan, ids2str
-import anki.js
+from .lang import _, ngettext
+from .utils import fmtTimeSpan, ids2str
+from . import js
+from .statsbg import bg
 
 
 # Card stats
@@ -115,7 +116,6 @@ class CollectionStats(object):
     def report(self, type=0):
         # 0=days, 1=weeks, 2=months
         self.type = type
-        from statsbg import bg
         txt = self.css % bg
         txt += self.todayStats()
         txt += self.dueGraph()
@@ -127,7 +127,7 @@ class CollectionStats(object):
         txt += self.cardGraph()
         txt += self.footer()
         return "<script>%s\n</script><center>%s</center>" % (
-            anki.js.jquery + anki.js.plot, txt)
+            js.jquery + js.plot, txt)
 
     css = """
 <style>

@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 # Copyright: Damien Elmes <anki@ichi2.net>
-# License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
-import pprint
+# Copyright © 2014 Roland Sieker <ospalh@gmail.com>
+#
+# License: GNU AGPL, version 3 or later;
+# http://www.gnu.org/licenses/agpl.html
 
+import pprint
 import time
 
-from anki.consts import MODEL_STD
-from anki.hooks import runHook
-from anki.utils import intTime, joinFields, timestampID
+from .consts import MODEL_STD
+from .hooks import runHook
+from .utils import intTime, joinFields, timestampID
 
 
 # Cards

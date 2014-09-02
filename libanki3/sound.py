@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 # Copyright: Damien Elmes <anki@ichi2.net>
-# License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
+# Copyright © 2014 Roland Sieker <ospalh@gmail.com>
+#
+# License: GNU AGPL, version 3 or later;
+# http://www.gnu.org/licenses/agpl.html
 
 import atexit
 import os
@@ -11,9 +14,9 @@ import sys
 import threading
 import time
 
-from anki.hooks import addHook
-from anki.lang import _
-from anki.utils import isMac, isWin, tmpdir
+from .hooks import addHook
+from .lang import _
+from .utils import isMac, isWin
 
 # Shared utils
 ##########################################################################

@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 # Copyright: Damien Elmes <anki@ichi2.net>
-# License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
+# Copyright © 2014 Roland Sieker <ospalh@gmail.com>
+#
+# License: GNU AGPL, version 3 or later;
+# http://www.gnu.org/licenses/agpl.html
 
 import re
 import sre_constants
@@ -8,7 +11,7 @@ import sre_constants
 from .utils import fieldChecksum, ids2str, intTime, joinFields, \
     splitFields, stripHTMLMedia
 from .consts import MODEL_CLOZE
-from anki.hooks import runHook
+from .hooks import runHook
 
 
 # Find

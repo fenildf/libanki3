@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
+# Copyright: Damien Elmes <anki@ichi2.net>
+# Copyright © 2014 Roland Sieker <ospalh@gmail.com>
+#
+# License: GNU AGPL, version 3 or later;
+# http://www.gnu.org/licenses/agpl.html
 
 import re
 
-from anki.hooks import runFilter
-from anki.template import furigana
-from anki.template import hint
-from anki.utils import stripHTML, stripHTMLMedia
+from . import furigana
+from . import hint
+from ..hooks import runFilter
+from ..utils import stripHTML, stripHTMLMedia
+
 
 furigana.install()
 hint.install()

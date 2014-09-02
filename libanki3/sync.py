@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 # Copyright: Damien Elmes <anki@ichi2.net>
-# License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
+# Copyright © 2014 Roland Sieker <ospalh@gmail.com>
+#
+# License: GNU AGPL, version 3 or later;
+# http://www.gnu.org/licenses/agpl.html
 
 from cStringIO import StringIO
 import gzip
@@ -10,12 +13,12 @@ import random
 import sys
 import urllib
 
-from anki.consts import REM_CARD, REM_NOTE, SYNC_BASE, SYNC_VER, SYNC_ZIP_COUNT
-from anki.db import DB
-from anki.utils import ids2str, intTime, json, isWin, isMac, platDesc, checksum
-from hooks import runHook
-import anki
-from lang import ngettext
+from . import __version__
+from .consts import REM_CARD, REM_NOTE, SYNC_BASE, SYNC_VER, SYNC_ZIP_COUNT
+from .db import DB
+from .utils import ids2str, intTime, json, isWin, isMac, platDesc, checksum
+from .hooks import runHook
+from .lang import ngettext
 
 # syncing vars
 HTTP_TIMEOUT = 90
@@ -643,7 +646,7 @@ class RemoteServer(HttpSyncer):
             "meta",
             StringIO(json.dumps(dict(
                 v=SYNC_VER, cv="ankidesktop,%s,%s" % (
-                    anki.version, platDesc())))),
+                    __version__, platDesc())))),
             badAuthRaises=False)
         if not ret:
             # invalid auth
@@ -682,7 +685,7 @@ class FullSyncer(HttpSyncer):
         HttpSyncer.__init__(self, hkey, con)
         self.postVars = dict(
             k=self.hkey,
-            v="ankidesktop,%s,%s" % (anki.version, platDesc()),
+            v="ankidesktop,%s,%s" % (__version__, platDesc()),
         )
         self.col = col
 
@@ -880,7 +883,7 @@ class RemoteMediaServer(HttpSyncer):
     def begin(self):
         self.postVars = dict(
             k=self.hkey,
-            v="ankidesktop,%s,%s" % (anki.version, platDesc())
+            v="ankidesktop,%s,%s" % (__version__, platDesc())
         )
         ret = self._dataOnly(json.loads(self.req(
             "begin", StringIO(json.dumps(dict())))))

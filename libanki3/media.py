@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 # Copyright: Damien Elmes <anki@ichi2.net>
-# License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
+# Copyright © 2014 Roland Sieker <ospalh@gmail.com>
+#
+# License: GNU AGPL, version 3 or later;
+# http://www.gnu.org/licenses/agpl.html
 
 from cStringIO import StringIO
 import re
@@ -11,10 +14,11 @@ import unicodedata
 import urllib
 import zipfile
 
-from anki.consts import MODEL_CLOZE, SYNC_ZIP_COUNT, SYNC_ZIP_SIZE
-from anki.db import DB
-from anki.latex import mungeQA
-from anki.utils import checksum, isMac, isWin, json
+from .consts import MODEL_CLOZE, SYNC_ZIP_COUNT, SYNC_ZIP_SIZE
+from .db import DB
+from .latex import mungeQA
+from .template.template import clozeReg
+from .utils import checksum, isMac, isWin, json
 
 
 class MediaManager(object):
@@ -203,7 +207,6 @@ create table meta (dirMod int, lastUsn int); insert into meta values (0, 0);
     def _expandClozes(self, string):
         ords = set(re.findall("{{c(\d+)::.+?}}", string))
         strings = []
-        from anki.template.template import clozeReg
 
         def qrepl(m):
             if m.group(3):
@@ -382,7 +385,7 @@ create table meta (dirMod int, lastUsn int); insert into meta values (0, 0);
     def _changes(self):
         self.cache = {}
         for (name, csum, mod) in self.db.execute(
-            "select fname, csum, mtime from media where csum is not null"):
+                "select fname, csum, mtime from media where csum is not null"):
             self.cache[name] = [csum, mod, False]
         added = []
         removed = []

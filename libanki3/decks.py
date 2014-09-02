@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 # Copyright: Damien Elmes <anki@ichi2.net>
-# License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
+# Copyright © 2014 Roland Sieker <ospalh@gmail.com>
+#
+# License: GNU AGPL, version 3 or later;
+# http://www.gnu.org/licenses/agpl.html
 
 import copy
 
-from anki.consts import NEW_CARDS_DUE, REM_DECK
-from anki.errors import DeckRenameError
-from anki.hooks import runHook
-from anki.lang import _
-from anki.utils import intTime, ids2str, json
+from .consts import NEW_CARDS_DUE, REM_DECK
+from .errors import DeckRenameError
+from .hooks import runHook
+from .lang import _
+from .utils import intTime, ids2str, json
 
 # fixmes:
 # - make sure users can't set grad interval < 1
@@ -239,7 +242,8 @@ class DeckManager(object):
         if '::' in newName:
             newParent = '::'.join(newName.split('::')[:-1])
             if self.byName(newParent)['dyn']:
-                raise DeckRenameError(_("A filtered deck cannot have subdecks."))
+                raise DeckRenameError(
+                    _("A filtered deck cannot have subdecks."))
         # rename children
         for grp in self.all():
             if grp['name'].startswith(g['name'] + "::"):
