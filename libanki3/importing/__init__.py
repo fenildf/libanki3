@@ -6,7 +6,6 @@
 # http://www.gnu.org/licenses/agpl.html
 
 from ..lang import _
-from .anki1 import Anki1Importer
 from .anki2 import Anki2Importer
 from .apkg import AnkiPackageImporter
 from .csvfile import TextImporter
@@ -17,7 +16,6 @@ from .supermemo_xml import SupermemoXmlImporter
 Importers = (
     (_("Text separated by tabs or semicolons (*)"), TextImporter),
     (_("Packaged Anki Deck (*.apkg *.zip)"), AnkiPackageImporter),
-    (_("Anki 1.2 Deck (*.anki)"), Anki1Importer),
     (_("Mnemosyne 2.0 Deck (*.db)"), MnemosyneImporter),
     (_("Supermemo XML export (*.xml)"), SupermemoXmlImporter),
     (_("Pauker 1.8 Lesson (*.pau.gz)"), PaukerImporter))
