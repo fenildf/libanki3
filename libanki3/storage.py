@@ -10,6 +10,7 @@ import os
 import re
 import simplejson as json
 
+
 from .collection import _Collection
 from .consts import MODEL_CLOZE, MODEL_STD, SCHEMA_VERSION
 from .db import DB
@@ -17,7 +18,8 @@ from .lang import _
 from .stdmodels import addBasicModel, addClozeModel, \
     addForwardOptionalReverse, addForwardReverse
 from .utils import intTime
-from . import models
+from . import collection, decks, models
+
 
 def Collection(path, lock=True, server=False, sync=True, log=False):
     "Open a new or existing collection. Path must be unicode."
@@ -299,16 +301,14 @@ values(1,0,0,%(s)s,%(v)s,0,0,0,'','{}','','','{}');
 
 
 def _getColVars(db):
-    import anki.collection
-    import anki.decks
-    g = copy.deepcopy(anki.decks.defaultDeck)
+    g = copy.deepcopy(decks.defaultDeck)
     g['id'] = 1
     g['name'] = _("Default")
     g['conf'] = 1
     g['mod'] = intTime()
-    gc = copy.deepcopy(anki.decks.defaultConf)
+    gc = copy.deepcopy(decks.defaultConf)
     gc['id'] = 1
-    return g, gc, anki.collection.defaultConf.copy()
+    return g, gc, collection.defaultConf.copy()
 
 
 def _addColVars(db, g, gc, c):

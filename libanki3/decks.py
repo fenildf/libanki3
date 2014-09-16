@@ -24,9 +24,8 @@ defaultDeck = {
     'conf': 1,
     'usn': 0,
     'desc': "",
-    'dyn': 0,  # anki uses int/bool interchangably here
+    'dyn': 0,  # We use this for tests `if NN.['dyn']: …`
     'collapsed': False,
-    # added in beta11
     'extendNew': 10,
     'extendRev': 50,
 }

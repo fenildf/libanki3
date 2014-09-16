@@ -11,9 +11,16 @@ import random
 # import stat
 import time
 import traceback
+import simplejson as json
 
+
+from .stats import CardStats, CollectionStats
 from . import __version__
 from . import db as libanki_db  # to clearly differtiate from self.db
+from . import find
+from . import latex  # sets up hook
+from . import template
+from .cards import Card
 from .consts import HELP_SITE, MODEL_CLOZE, MODEL_STD, \
     NEW_CARDS_DISTRIBUTE, NEW_CARDS_DUE, REM_CARD, REM_NOTE
 from .decks import DeckManager
@@ -22,17 +29,11 @@ from .hooks import runFilter, runHook
 from .lang import _, ngettext
 from .media import MediaManager
 from .models import ModelManager
+from .notes import Note
 from .sched import Scheduler
 from .sound import stripSounds
 from .tags import TagManager
-from .utils import fieldChecksum, ids2str, intTime, joinFields, json, \
-    maxID, splitFields, stripHTML
-from .cards import Card
-
-import .find
-import .latex  # sets up hook
-from .notes import Note
-import .template
+from .utils import fieldChecksum, ids2str, intTime, joinFields, maxID, splitFields, stripHTML
 
 
 defaultConf = {
@@ -504,34 +505,35 @@ where c.nid = n.id and c.id in %s group by nid""" % ids2str(cids)):
         fields['Type'] = model['name']
         fields['Deck'] = self.decks.name(data[3])
         if model['type'] == MODEL_STD:
-            template = model['tmpls'][data[4]]
+            template_ = model['tmpls'][data[4]]
         else:
-            template = model['tmpls'][0]
-        fields['Card'] = template['name']
+            template_ = model['tmpls'][0]
+        fields['Card'] = template_['name']
         fields['c%d' % (data[4] + 1)] = "1"
         # render q & a
         d = dict(id=data[0])
-        qfmt = qfmt or template['qfmt']
-        afmt = afmt or template['afmt']
-        for (type, format) in (("q", qfmt), ("a", afmt)):
-            if type == "q":
-                format = re.sub(
+        qfmt = qfmt or template_['qfmt']
+        afmt = afmt or template_['afmt']
+        for (type_, format_) in (("q", qfmt), ("a", afmt)):
+            if type_ == "q":
+                format_ = re.sub(
                     "{{(?!type:)(.*?)cloze:", r"{{\1cq-%d:" % (data[4]+1),
-                    format)
-                format = format.replace(
+                    format_)
+                format_ = format_.replace(
                     "<%cloze:", "<%%cq:%d:" % (data[4]+1))
             else:
-                format = re.sub(
-                    "{{(.*?)cloze:", r"{{\1ca-%d:" % (data[4]+1), format)
-                format = format.replace(
+                format_ = re.sub(
+                    "{{(.*?)cloze:", r"{{\1ca-%d:" % (data[4]+1), format_)
+                format_ = format_.replace(
                     "<%cloze:", "<%%ca:%d:" % (data[4]+1))
                 fields['FrontSide'] = stripSounds(d['q'])
             fields = runFilter("mungeFields", fields, model, data, self)
-            html = anki.template.render(format, fields)
-            d[type] = runFilter(
-                "mungeQA", html, type, fields, model, data, self)
+            html = template.render(format_, fields)
+            # This is the template from ., not template_.
+            d[type_] = runFilter(
+                "mungeQA", html, type_, fields, model, data, self)
             # empty cloze?
-            if type == 'q' and model['type'] == MODEL_CLOZE:
+            if type_ == 'q' and model['type'] == MODEL_CLOZE:
                 if not self.models._availClozeOrds(model, data[6], False):
                     d['q'] += (
                         "<p>" + _("Please edit this note and add some cloze \
@@ -550,26 +552,24 @@ where c.nid == f.id
     ##########################################################################
 
     def findCards(self, query, order=False):
-        return anki.find.Finder(self).findCards(query, order)
+        return find.Finder(self).findCards(query, order)
 
     def findNotes(self, query):
-        return anki.find.Finder(self).findNotes(query)
+        return find.Finder(self).findNotes(query)
 
     def findReplace(self, nids, src, dst, regex=None, field=None, fold=True):
-        return anki.find.findReplace(self, nids, src, dst, regex, field, fold)
+        return find.findReplace(self, nids, src, dst, regex, field, fold)
 
     def findDupes(self, fieldName, search=""):
-        return anki.find.findDupes(self, fieldName, search)
+        return find.findDupes(self, fieldName, search)
 
     # Stats
     ##########################################################################
 
     def cardStats(self, card):
-        from anki.stats import CardStats
         return CardStats(self, card).report()
 
     def stats(self):
-        from anki.stats import CollectionStats
         return CollectionStats(self)
 
     # Timeboxing
@@ -640,8 +640,8 @@ where c.nid == f.id
             intTime(), self.usn(), c.nid)
         # and finally, update daily counts
         n = 1 if c.queue == 3 else c.queue
-        type = ("new", "lrn", "rev")[n]
-        self.sched._updateStats(c, type, -1)
+        type_ = ("new", "lrn", "rev")[n]
+        self.sched._updateStats(c, type_, -1)
         self.sched.reps -= 1
         return c.id
 
