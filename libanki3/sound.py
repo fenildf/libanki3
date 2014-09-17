@@ -16,7 +16,7 @@ import time
 
 from .hooks import addHook
 from .lang import _
-from .utils import isMac, isWin
+from .utils import isMac, isWin, tmpdir
 
 # Shared utils
 ##########################################################################
@@ -178,8 +178,8 @@ def queueMplayer(path):
         # mplayer on windows doesn't like the encoding, so we create a
         # temporary file instead. oddly, foreign characters in the dirname
         # don't seem to matter.
-        dir = tmpdir()
-        name = os.path.join(dir, "audio%s%s" % (
+        dir_ = tmpdir()
+        name = os.path.join(dir_, "audio%s%s" % (
             random.randrange(0, 1000000), os.path.splitext(path)[1]))
         f = open(name, "wb")
         f.write(open(path, "rb").read())

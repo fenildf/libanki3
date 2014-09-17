@@ -815,8 +815,8 @@ class MediaSyncer(object):
                 break
 
             runHook("syncMsg", ngettext(
-                "%d media change to upload", "%d media changes to upload", toSend)
-                    % toSend)
+                "%d media change to upload", "%d media changes to upload",
+                toSend) % toSend)
 
             processedCnt, serverLastUsn = self.server.uploadChanges(zip)
             self.col.media.markClean(fnames[0:processedCnt])
@@ -828,7 +828,7 @@ class MediaSyncer(object):
             if serverLastUsn - processedCnt == lastUsn:
                 self.col.log("lastUsn in sync, updating local")
                 lastUsn = serverLastUsn
-                self.col.media.setLastUsn(serverLastUsn) # commits
+                self.col.media.setLastUsn(serverLastUsn)  # commits
             else:
                 self.col.log("concurrent update, skipping usn update")
                 # commit for markClean
@@ -861,9 +861,9 @@ class MediaSyncer(object):
             fnames = fnames[cnt:]
 
             n = self.downloadCount
-            runHook("syncMsg", ngettext(
-                "%d media file downloaded", "%d media files downloaded", n)
-                    % n)
+            runHook("syncMsg",
+                    ngettext("%d media file downloaded",
+                             "%d media files downloaded", n) % n)
 
 # Remote media syncing
 ##########################################################################

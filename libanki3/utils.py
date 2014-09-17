@@ -291,7 +291,44 @@ def fieldChecksum(data):
     # 32 bit unsigned number from first 8 digits of sha1 hash
     return int(checksum(stripHTMLMedia(data).encode("utf-8"))[:8], 16)
 
-# Removed DIY tmp file code. Use std tempfile instead
+
+# Temp files
+##############################################################################
+
+_tmpdir = None
+
+
+def tmpdir():
+    "A reusable temp folder which we clean out on each program invocation."
+    global _tmpdir
+    if not _tmpdir:
+        def cleanup():
+            shutil.rmtree(_tmpdir)
+        import atexit
+        atexit.register(cleanup)
+        _tmpdir = unicode(os.path.join(tempfile.gettempdir(), "anki_temp"),
+                          sys.getfilesystemencoding())
+    if not os.path.exists(_tmpdir):
+        os.mkdir(_tmpdir)
+    return _tmpdir
+
+
+def tmpfile(prefix="", suffix=""):
+    (fd, name) = tempfile.mkstemp(dir=tmpdir(), prefix=prefix, suffix=suffix)
+    os.close(fd)
+    return name
+
+
+def namedtmp(name, rm=True):
+    "Return tmpdir+name. Deletes any existing file."
+    path = os.path.join(tmpdir(), name)
+    if rm:
+        try:
+            os.unlink(path)
+        except (OSError, IOError):
+            pass
+    return path
+
 
 # Cmd invocation
 

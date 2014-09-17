@@ -33,7 +33,8 @@ from .notes import Note
 from .sched import Scheduler
 from .sound import stripSounds
 from .tags import TagManager
-from .utils import fieldChecksum, ids2str, intTime, joinFields, maxID, splitFields, stripHTML
+from .utils import fieldChecksum, ids2str, intTime, joinFields, maxID, \
+    splitFields, stripHTML
 
 
 defaultConf = {
@@ -261,8 +262,8 @@ crt=?, mod=?, scm=?, dty=?, usn=?, ls=?, conf=?""",
         due = self.nextID("pos")
         # add cards
         ncards = 0
-        for template in cms:
-            self._newCard(note, template, due)
+        for template_ in cms:
+            self._newCard(note, template_, due)
             ncards += 1
         return ncards
 
@@ -376,8 +377,9 @@ insert into cards values (?,?,?,?,?,?,0,0,?,0,0,0,0,0,0,0,0,"")""",
         if not cms:
             return []
         preview_cards = []
-        for template in cms:
-            preview_cards.append(self._newCard(note, template, 1, flush=False))
+        for template_ in cms:
+            preview_cards.append(
+                self._newCard(note, template_, 1, flush=False))
         return preview_cards
 
     def _newCard(self, note, template, due, flush=True):

@@ -276,13 +276,16 @@ group by day order by day""" % (self._limit(), lim),
 
     def introductionGraph(self):
         if self.type == 0:
-            days = 30; chunk = 1
+            days = 30
+            chunk = 1
         elif self.type == 1:
-            days = 52; chunk = 7
+            days = 52
+            chunk = 7
         else:
-            days = None; chunk = 30
-        return self._introductionGraph(self._added(days, chunk),
-                               days, _("Added"))
+            days = None
+            chunk = 30
+        return self._introductionGraph(
+            self._added(days, chunk), days, _("Added"))
 
     def _introductionGraph(self, data, days, title):
         if not data:
@@ -290,9 +293,10 @@ group by day order by day""" % (self._limit(), lim),
         d = data
         conf = dict(
             xaxis=dict(tickDecimals=0, max=0.5),
-            yaxes=[dict(min=0), dict(position="right",min=0)])
+            yaxes=[dict(min=0), dict(position="right", min=0)])
         if days is not None:
             conf['xaxis']['min'] = -days+0.5
+
         def plot(id, data, ylabel, ylabel2):
             return self._graph(
                 id, data=data, conf=conf, ylabel=ylabel, ylabel2=ylabel2)
@@ -300,7 +304,8 @@ group by day order by day""" % (self._limit(), lim),
         (repdata, repsum) = self._splitRepData(d, ((1, colLearn, ""),))
         txt = self._title(
             title, _("The number of new cards you have added."))
-        txt += plot("intro", repdata, ylabel=_("Cards"), ylabel2=_("Cumulative Cards"))
+        txt += plot(
+            "intro", repdata, ylabel=_("Cards"), ylabel2=_("Cumulative Cards"))
         # total and per day average
         tot = sum([i[1] for i in d])
         period = self._periodDays()
@@ -309,7 +314,8 @@ group by day order by day""" % (self._limit(), lim),
             period = self._deckAge('add')
         i = []
         self._line(i, _("Total"), _("%i cards") % tot)
-        self._line(i, _("Average"), _("%.01f cards/day") % (float(tot) / period))
+        self._line(
+            i, _("Average"), _("%.01f cards/day") % (float(tot) / period))
         txt += self._lineTbl(i)
 
         return txt
@@ -458,15 +464,17 @@ group by day order by day""" % (self._limit(), lim),
         else:
             lim = ""
         if self.type == 0:
-            tf = 60.0 # minutes
+            tf = 60.0  # minutes
         else:
-            tf = 3600.0 # hours
+            tf = 3600.0  # hours
         return self.col.db.all("""
 select
 (cast((id/1000.0 - :cut) / 86400.0 as int))/:chunk as day,
 count(id)
 from cards %s
-group by day order by day""" % lim, cut=self.col.sched.dayCutoff,tf=tf, chunk=chunk)
+group by day order by day""" % lim,
+                               cut=self.col.sched.dayCutoff, tf=tf,
+                               chunk=chunk)
 
     def _done(self, num=7, chunk=1):
         lims = []
@@ -926,10 +934,12 @@ $(function () {
         if lim:
             lim = " where " + lim
         if by == 'review':
-            t = self.col.db.scalar("select id from revlog %s order by id limit 1" % lim)
+            t = self.col.db.scalar(
+                "select id from revlog %s order by id limit 1" % lim)
         elif by == 'add':
             lim = "where did in %s" % ids2str(self.col.decks.active())
-            t = self.col.db.scalar("select id from cards %s order by id limit 1" % lim)
+            t = self.col.db.scalar(
+                "select id from cards %s order by id limit 1" % lim)
         if not t:
             period = 1
         else:
