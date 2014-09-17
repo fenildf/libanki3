@@ -38,8 +38,8 @@ def hasSound(text):
 
 ##########################################################################
 
-processingSrc = u"rec.wav"
-processingDst = u"rec.mp3"
+processingSrc = "rec.wav"
+processingDst = "rec.mp3"
 processingChain = []
 recFiles = []
 
@@ -248,7 +248,7 @@ class _Recorder(object):
             except:
                 ret = True
             if ret:
-                raise Exception(_("Error running %s") % u" ".join(c))
+                raise Exception(_("Error running %s") % " ".join(c))
 
 
 class PyAudioThreadedRecorder(threading.Thread):
@@ -316,7 +316,7 @@ class PyAudioRecorder(_Recorder):
 
     def file(self):
         if self.encode:
-            tgt = u"rec%d.mp3" % time.time()
+            tgt = "rec%d.mp3" % time.time()
             os.rename(processingDst, tgt)
             return tgt
         else:

@@ -5,13 +5,13 @@
 # License: GNU AGPL, version 3 or later;
 # http://www.gnu.org/licenses/agpl.html
 
-from cStringIO import StringIO
+from io import StringIO
 import re
 import os
 import sys
 import traceback
 import unicodedata
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import zipfile
 
 from .consts import MODEL_CLOZE, SYNC_ZIP_COUNT, SYNC_ZIP_SIZE
@@ -41,7 +41,7 @@ class MediaManager(object):
         self._dir = re.sub("(?i)\.(anki2)$", ".media", self.col.path)
         # convert dir to unicode if it's not already
         if isinstance(self._dir, str):
-            self._dir = unicode(self._dir, sys.getfilesystemencoding())
+            self._dir = str(self._dir, sys.getfilesystemencoding())
         if not os.path.exists(self._dir):
             os.makedirs(self._dir)
         try:
@@ -235,9 +235,9 @@ create table meta (dirMod int, lastUsn int); insert into meta values (0, 0);
 
     def escapeImages(self, string, unescape=False):
         if unescape:
-            fn = urllib.unquote
+            fn = urllib.parse.unquote
         else:
-            fn = urllib.quote
+            fn = urllib.parse.quote
 
         def repl(match):
             tag = match.group(0)
@@ -245,7 +245,7 @@ create table meta (dirMod int, lastUsn int); insert into meta values (0, 0);
             if re.match("(https?|ftp)://", fname):
                 return tag
             return tag.replace(
-                fname, unicode(fn(fname.encode("utf-8")), "utf8"))
+                fname, str(fn(fname.encode("utf-8")), "utf8"))
         for reg in self.imgRegexps:
             string = re.sub(reg, repl, string)
         return string
@@ -285,9 +285,9 @@ create table meta (dirMod int, lastUsn int); insert into meta values (0, 0);
             if file.startswith("_"):
                 # leading _ says to ignore file
                 continue
-            if not isinstance(file, unicode):
+            if not isinstance(file, str):
                 invalid.append(
-                    unicode(file, sys.getfilesystemencoding(), "replace"))
+                    str(file, sys.getfilesystemencoding(), "replace"))
                 continue
             nfcFile = unicodedata.normalize("NFC", file)
             # we enforce NFC fs encoding on non-macs; on macs we'll have gotten
@@ -338,7 +338,7 @@ create table meta (dirMod int, lastUsn int); insert into meta values (0, 0);
 
     def hasIllegal(self, str):
         # a file that couldn't be decoded to unicode is considered invalid
-        if not isinstance(str, unicode):
+        if not isinstance(str, str):
             return True
         return not not re.search(self._illegalCharReg, str)
 
@@ -428,7 +428,7 @@ create table meta (dirMod int, lastUsn int); insert into meta values (0, 0);
                 # mark as used
                 self.cache[f][2] = True
         # look for any entries in the cache that no longer exist on disk
-        for (k, v) in self.cache.items():
+        for (k, v) in list(self.cache.items()):
             if not v[2]:
                 removed.append(k)
         return added, removed
@@ -525,8 +525,8 @@ create table meta (dirMod int, lastUsn int); insert into meta values (0, 0);
                 data = z.read(i)
                 csum = checksum(data)
                 name = meta[i.filename]
-                if not isinstance(name, unicode):
-                    name = unicode(name, "utf8")
+                if not isinstance(name, str):
+                    name = str(name, "utf8")
                 # normalize name for platform
                 if isMac:
                     name = unicodedata.normalize("NFD", name)

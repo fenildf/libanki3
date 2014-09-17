@@ -16,7 +16,7 @@ Error = sqlite.Error
 class DB(object):
     def __init__(self, path, text=None, timeout=0):
         encpath = path
-        if isinstance(encpath, unicode):
+        if isinstance(encpath, str):
             encpath = path.encode("utf-8")
         self._db = sqlite.connect(encpath, timeout=timeout)
         if text:
@@ -40,9 +40,9 @@ class DB(object):
             res = self._db.execute(sql, a)
         if self.echo:
             # print a, ka
-            print sql, "%0.3fms" % ((time.time() - t) * 1000)
+            print(sql, "%0.3fms" % ((time.time() - t) * 1000))
             if self.echo == "2":
-                print a, ka
+                print(a, ka)
         return res
 
     def executemany(self, sql, l):
@@ -50,20 +50,20 @@ class DB(object):
         t = time.time()
         self._db.executemany(sql, l)
         if self.echo:
-            print sql, "%0.3fms" % ((time.time() - t) * 1000)
+            print(sql, "%0.3fms" % ((time.time() - t) * 1000))
             if self.echo == "2":
-                print l
+                print(l)
 
     def commit(self):
         t = time.time()
         self._db.commit()
         if self.echo:
-            print "commit %0.3fms" % ((time.time() - t) * 1000)
+            print("commit %0.3fms" % ((time.time() - t) * 1000))
 
     def executescript(self, sql):
         self.mod = True
         if self.echo:
-            print sql
+            print(sql)
         self._db.executescript(sql)
 
     def rollback(self):

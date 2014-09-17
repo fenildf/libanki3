@@ -113,7 +113,7 @@ class Template(object):
             replacer = ''
             # if it and isinstance(it, collections.Callable):
             #     replacer = it(inner)
-            if isinstance(it, basestring):
+            if isinstance(it, str):
                 it = stripHTMLMedia(it).strip()
             if it and not hasattr(it, '__iter__'):
                 if section[2] != '^':
@@ -147,7 +147,7 @@ class Template(object):
                 replacement = func(self, tag_name, context)
                 template = template.replace(tag, replacement)
             except (SyntaxError, KeyError):
-                return u"{{invalid template}}"
+                return "{{invalid template}}"
 
         return template
 

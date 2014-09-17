@@ -5,7 +5,7 @@
 # License: GNU AGPL, version 3 or later;
 # http://www.gnu.org/licenses/agpl.html
 
-from __future__ import division
+
 from heapq import heappop, heappush
 from operator import itemgetter
 import itertools

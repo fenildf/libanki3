@@ -5,13 +5,13 @@
 # License: GNU AGPL, version 3 or later;
 # http://www.gnu.org/licenses/agpl.html
 
-from cStringIO import StringIO
+from io import StringIO
 import gzip
 import httplib2
 import os
 import random
 import sys
-import urllib
+import urllib.request, urllib.parse, urllib.error
 
 from . import __version__
 from .consts import REM_CARD, REM_NOTE, SYNC_BASE, SYNC_VER, SYNC_ZIP_COUNT
@@ -569,7 +569,7 @@ class HttpSyncer(object):
         buf = StringIO()
         # post vars
         self.postVars['c'] = 1 if comp else 0
-        for (key, value) in self.postVars.items():
+        for (key, value) in list(self.postVars.items()):
             buf.write(bdry + "\r\n")
             buf.write(
                 'Content-Disposition: form-data; name="%s"\r\n\r\n%s\r\n' %

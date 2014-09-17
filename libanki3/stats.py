@@ -2,7 +2,7 @@
 # Copyright: Damien Elmes <anki@ichi2.net>
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
-from __future__ import division
+
 import datetime
 import simplejson as json
 import time
@@ -164,7 +164,7 @@ from revlog where id > ? """ + lim, (self.col.sched.dayCutoff - 86400) * 1000)
         # studied
 
         def bold(s):
-            return "<b>" + unicode(s) + "</b>"
+            return "<b>" + str(s) + "</b>"
         msgp1 = ngettext(
             "<!--studied-->%d card", "<!--studied-->%d cards", cards) % cards
         b += _("Studied %(a)s in %(b)s today.") % dict(

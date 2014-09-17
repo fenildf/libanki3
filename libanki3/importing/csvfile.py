@@ -39,12 +39,12 @@ class TextImporter(NoteImporter):
             reader = csv.reader(self.data, self.dialect, doublequote=True)
         try:
             for row in reader:
-                row = [unicode(x, "utf-8") for x in row]
+                row = [str(x, "utf-8") for x in row]
                 if len(row) != self.numFields:
                     if row:
                         log.append(_(
                             "'%(row)s' had %(num1)d fields, "
-                            "expected %(num2)d") % {"row": u" ".join(row),
+                            "expected %(num2)d") % {"row": " ".join(row),
                                                     "num1": len(row),
                                                     "num2": self.numFields})
                         ignored += 1
@@ -81,7 +81,7 @@ class TextImporter(NoteImporter):
                      if sub(x) != "__comment"]
         if self.data:
             if self.data[0].startswith("tags:"):
-                tags = unicode(self.data[0][5:], "utf8").strip()
+                tags = str(self.data[0][5:], "utf8").strip()
                 self.tagsToAdd = tags.split(" ")
                 del self.data[0]
             self.updateDelimiter()
@@ -122,7 +122,7 @@ class TextImporter(NoteImporter):
                 self.data, delimiter=self.delimiter, doublequote=True)
         try:
             while True:
-                row = reader.next()
+                row = next(reader)
                 if row:
                     self.numFields = len(row)
                     break
