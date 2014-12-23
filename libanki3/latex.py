@@ -19,6 +19,7 @@ from .lang import _
 latexCmds = [
     ["latex", "-interaction=nonstopmode", "tmp.tex"],
     ["dvipng", "-D", "200", "-T", "tight", "tmp.dvi", "-o", "tmp.png"]
+#    ["dvipng", "-D", "600", "-T", "tight", "-bg", "Transparent", "tmp.dvi", "-o", "tmp.png"]
 ]
 
 build = True  # if off, use existing media but don't create new
@@ -65,7 +66,7 @@ def _imgLink(col, latex, model):
     "Return an img link for LATEX, creating if necesssary."
     txt = _latexFromHtml(col, latex)
     fname = "latex-%s.png" % checksum(txt.encode("utf8"))
-    link = '<img src="%s">' % fname
+    link = '<img class=latex src="%s">' % fname
     if os.path.exists(fname):
         return link
     elif not build:

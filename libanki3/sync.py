@@ -119,6 +119,13 @@ class Syncer(object):
         self.col.log("rmeta", meta)
         if not meta:
             return "badAuth"
+        # server requested abort?
+        if not meta['cont']:
+            return "serverAbort"
+        else:
+            # don't abort, but if 'msg' is not blank, gui should show 'msg'
+            # after sync finishes and wait for confirmation before hiding
+            pass
         rscm = meta['scm']
         rts = meta['ts']
         self.rmod = meta['mod']
@@ -129,13 +136,6 @@ class Syncer(object):
         # forgetting which email address they've used - it will be removed
         # when enough time has passed
         self.uname = meta.get("uname", "")
-        # server requested abort?
-        if not meta['cont']:
-            return "serverAbort"
-        else:
-            # don't abort, but ui should show message after sync finishes
-            # and require confirmation if it's non-empty
-            pass
         meta = self.meta()
         self.col.log("lmeta", meta)
         self.lmod = meta['mod']
@@ -191,7 +191,7 @@ class Syncer(object):
         if ret['status'] != "ok":
             # roll back and force full sync
             self.col.rollback()
-            self.col.modSchema()
+            self.col.modSchema(False)
             self.col.save()
             return "sanityCheckFailed"
         # finalize
@@ -328,7 +328,7 @@ from notes where %s""" % d)
 
     def chunk(self):
         buf = dict(done=False)
-        lim = 2500
+        lim = 250
         while self.tablesLeft and lim:
             curTable = self.tablesLeft[0]
             if not self.cursor:

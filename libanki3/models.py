@@ -154,7 +154,7 @@ class ModelManager(object):
 
     def rem(self, m):
         "Delete model, and all its cards/notes."
-        self.col.modSchema()
+        self.col.modSchema(check=True)
         current = self.current()['id'] == m['id']
         # delete notes/cards
         self.col.remCards(self.col.db.list("""
@@ -247,7 +247,7 @@ and notes.mid = ? and cards.ord = ?""", m['id'], ord)
 
     def setSortIdx(self, m, idx):
         assert idx >= 0 and idx < len(m['flds'])
-        self.col.modSchema()
+        self.col.modSchema(check=True)
         m['sortf'] = idx
         self.col.updateFieldCache(self.nids(m))
         self.save(m)
@@ -255,7 +255,7 @@ and notes.mid = ? and cards.ord = ?""", m['id'], ord)
     def addField(self, m, field):
         # only mod schema if model isn't new
         if m['id']:
-            self.col.modSchema()
+            self.col.modSchema(check=True)
         m['flds'].append(field)
         self._updateFieldOrds(m)
         self.save(m)
@@ -266,7 +266,7 @@ and notes.mid = ? and cards.ord = ?""", m['id'], ord)
         self._transformFields(m, add)
 
     def remField(self, m, field):
-        self.col.modSchema()
+        self.col.modSchema(check=True)
         # save old sort field
         sortFldName = m['flds'][m['sortf']]['name']
         idx = m['flds'].index(field)
@@ -290,7 +290,7 @@ and notes.mid = ? and cards.ord = ?""", m['id'], ord)
         self.renameField(m, field, None)
 
     def moveField(self, m, field, idx):
-        self.col.modSchema()
+        self.col.modSchema(check=True)
         oldidx = m['flds'].index(field)
         if oldidx == idx:
             return
@@ -312,7 +312,7 @@ and notes.mid = ? and cards.ord = ?""", m['id'], ord)
         self._transformFields(m, move)
 
     def renameField(self, m, field, newName):
-        self.col.modSchema()
+        self.col.modSchema(check=True)
         pat = r'{{(.*)([:#^/]|[^:#/^}][^:}]*?:|)%s}}'
 
         def wrap(txt):
@@ -357,7 +357,7 @@ and notes.mid = ? and cards.ord = ?""", m['id'], ord)
     def addTemplate(self, m, template):
         "Note: should col.genCards() afterwards."
         if m['id']:
-            self.col.modSchema()
+            self.col.modSchema(check=True)
         m['tmpls'].append(template)
         self._updateTemplOrds(m)
         self.save(m)
@@ -380,7 +380,7 @@ having count() < 2
 limit 1""" % ids2str(cids)):
             return False
         # ok to proceed; remove cards
-        self.col.modSchema()
+        self.col.modSchema(check=True)
         self.col.remCards(cids)
         # shift ordinals
         self.col.db.execute("""
@@ -425,7 +425,7 @@ select id from notes where mid = ?)""" % " ".join(map),
     # - newModel should be self if model is not changing
 
     def change(self, m, nids, newModel, fmap, cmap):
-        self.col.modSchema()
+        self.col.modSchema(check=True)
         assert newModel['id'] == m['id'] or (fmap and cmap)
         if fmap:
             self._changeNotes(nids, newModel, fmap)
